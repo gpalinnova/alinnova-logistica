@@ -1,21 +1,18 @@
-import AreaPage from '../../components/AreaPage'
-
-const ITEMS = [
-  { icon: '📤', title: 'Subir Archivo' },
-  { icon: '📝', title: 'Nueva Remisión' },
-  { icon: '🔄', title: 'Ciclo de Entrega' },
-  { icon: '🗂️', title: 'Historial' },
-  { icon: '💬', title: 'Tabla WhatsApp', href: '/reforzados/tabla-whatsapp', accent: 'accent-whatsapp' },
-]
+import Link from 'next/link'
+import PageHeader from '../../components/PageHeader'
 
 export default function ReforzadosPage() {
   return (
-    <AreaPage
-      backHref="/"
-      backLabel="Inicio"
-      title="Reforzados"
-      subtitle="Control Logística"
-      items={ITEMS}
-    />
+    <div className="app-layout">
+      <main className="main-content">
+        <PageHeader backHref="/" backLabel="Inicio" title="Reforzados" subtitle="Control Logística" />
+        <div className="page-content">
+          <Link href="/reforzados/tabla-whatsapp" className="feature-card-single accent-whatsapp">
+            <div className="feature-card-single-icon">💬</div>
+            <div className="feature-card-single-title">Tabla WhatsApp</div>
+          </Link>
+        </div>
+      </main>
+    </div>
   )
 }
