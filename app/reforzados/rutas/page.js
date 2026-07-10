@@ -8,7 +8,7 @@ import RutaPreviewModal from '../../../components/RutaPreviewModal'
 import RutaDetalleModal from '../../../components/RutaDetalleModal'
 import RutaEditModal from '../../../components/RutaEditModal'
 import { supabase } from '../../../lib/supabase'
-import { parseRutasExcel, readFileAsArrayBuffer, detectMesAnioFromFilename } from '../../../lib/parseRutasExcel'
+import { parseRutasExcel, parseRutasPaste, readFileAsArrayBuffer, detectMesAnioFromFilename } from '../../../lib/parseRutasExcel'
 import { descargarPlantillaRutas } from '../../../lib/rutasTemplate'
 
 function sortRutas(list) {
@@ -26,6 +26,8 @@ export default function RutasPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [toast, setToast] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const [analizandoPaste, setAnalizandoPaste] = useState(false)
   const [preview, setPreview] = useState(null)
   const [saving, setSaving] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null)
@@ -102,6 +104,20 @@ export default function RutasPage() {
       setErrorMsg(err.message || 'No se pudo leer el archivo Excel.')
     } finally {
       setUploading(false)
+    }
+  }
+
+  function handleAnalizarPaste() {
+    setAnalizandoPaste(true)
+    setErrorMsg('')
+    try {
+      const data = parseRutasPaste(pasteText)
+      setPreview({ data, archivoNombre: 'Pegado desde portapapeles', mesDetectado: null })
+      setPasteText('')
+    } catch (err) {
+      setErrorMsg(err.message || 'No se pudo analizar el texto pegado.')
+    } finally {
+      setAnalizandoPaste(false)
     }
   }
 
@@ -335,23 +351,44 @@ export default function RutasPage() {
           {errorMsg && <div className="form-error-banner">{errorMsg}</div>}
 
           <div className="section-label">Cargar Ruta del Mes</div>
-          <div className="dropzone">
-            <div className="dropzone-icon">📤</div>
-            <div className="dropzone-text">Subir Excel de Ruta Mensual</div>
-            <button className="btn-primary" onClick={handlePickFile} disabled={uploading}>
-              {uploading ? 'Leyendo archivo...' : 'Seleccionar Archivo'}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-            />
-            <div style={{ marginTop: 14 }}>
-              <a href="#" onClick={e => { e.preventDefault(); descargarPlantillaRutas() }} className="breadcrumb-link" style={{ color: '#3D1F3D', display: 'inline-flex' }}>
-                📥 Descargar plantilla
-              </a>
+          <div className="carga-ruta-grid">
+            <div className="dropzone dropzone-highlight">
+              <div className="dropzone-icon">📋</div>
+              <div className="dropzone-text">Pegar desde Excel</div>
+              <textarea
+                className="paste-textarea"
+                placeholder="Copia el rango de tu Excel y pégalo aquí (Ctrl+V). Incluye la fila de encabezados."
+                value={pasteText}
+                onChange={e => setPasteText(e.target.value)}
+                rows={8}
+              />
+              {pasteText.trim().length > 0 && (
+                <button className="btn-primary" onClick={handleAnalizarPaste} disabled={analizandoPaste}>
+                  {analizandoPaste ? 'Analizando...' : '🔍 Analizar pegado'}
+                </button>
+              )}
+            </div>
+
+            <div className="carga-ruta-divider"><span>o</span></div>
+
+            <div className="dropzone">
+              <div className="dropzone-icon">📤</div>
+              <div className="dropzone-text">Subir Excel</div>
+              <button className="btn-primary" onClick={handlePickFile} disabled={uploading}>
+                {uploading ? 'Leyendo archivo...' : 'Seleccionar Archivo'}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+              <div style={{ marginTop: 14 }}>
+                <a href="#" onClick={e => { e.preventDefault(); descargarPlantillaRutas() }} className="breadcrumb-link" style={{ color: '#3D1F3D', display: 'inline-flex' }}>
+                  📥 Descargar plantilla
+                </a>
+              </div>
             </div>
           </div>
 

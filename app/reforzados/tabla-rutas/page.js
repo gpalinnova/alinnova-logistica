@@ -265,17 +265,20 @@ export default function TablaRutasPage() {
                 <table className="rutas-table">
                   <thead>
                     <tr>
-                      <th>Conductor</th>
-                      <th>Placa</th>
-                      <th>Cargue Alinnova</th>
-                      <th>Id Sitio</th>
-                      <th>Nombre y/o Descripción Sitio</th>
-                      <th>Dirección</th>
-                      <th>Horario Sugerido Compensar</th>
-                      <th>Horario Entrega Alinnova</th>
-                      <th>Orden</th>
-                      <th>Total Tipo 1</th>
-                      <th>Total Tipo 2</th>
+                      <th rowSpan={2}>CONDUCTOR</th>
+                      <th rowSpan={2}>PLACA</th>
+                      <th rowSpan={2}>CARGUE ALINNOVA</th>
+                      <th rowSpan={2}>Id Sitio Entrega</th>
+                      <th rowSpan={2}>Nombre y/o Descripción Sitio de Entrega</th>
+                      <th rowSpan={2}>HORARIO SUGERIDO COMPENSAR</th>
+                      <th rowSpan={2}>HORARIO ENTREGA ALINNOVA</th>
+                      <th rowSpan={2}>ORDEN ENTREGA</th>
+                      <th colSpan={2}>TOTAL ENTREGA</th>
+                      <th rowSpan={2}>Dirección de Entrega</th>
+                    </tr>
+                    <tr>
+                      <th>TIPO 1</th>
+                      <th>TIPO 2</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -295,25 +298,27 @@ export default function TablaRutasPage() {
                             )}
                             <td>{f.idSitio}</td>
                             <td>{f.nombreDescripcion}</td>
-                            <td>{f.direccion}</td>
                             <td>{f.horarioSugerido}</td>
                             <td>{f.horarioEntregaAlinnova}</td>
                             <td>{f.orden}{f.sinBase ? ' ⚠️' : ''}</td>
-                            <td>{f.sinBase ? '-' : f.tipo1}</td>
-                            <td>{f.sinBase ? '-' : f.tipo2}</td>
+                            <td>{f.sinBase ? '—' : f.tipo1}</td>
+                            <td>{f.sinBase ? '—' : f.tipo2}</td>
+                            <td>{f.direccion}</td>
                           </tr>
                         ))}
                         <tr className="rt-subtotal-row">
-                          <td colSpan={9}>SUBTOTAL {c.conductor}</td>
+                          <td colSpan={8}>SUBTOTAL {c.conductor}</td>
                           <td>{c.subtotalTipo1}</td>
                           <td>{c.subtotalTipo2}</td>
+                          <td></td>
                         </tr>
                       </Fragment>
                     ))}
                     <tr className="rt-total-row">
-                      <td colSpan={9}>TOTAL GENERAL</td>
+                      <td colSpan={8}>TOTAL GENERAL</td>
                       <td>{tableData.totalTipo1}</td>
                       <td>{tableData.totalTipo2}</td>
+                      <td></td>
                     </tr>
                   </tbody>
                 </table>
