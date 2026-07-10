@@ -150,7 +150,7 @@ export default function ProductosPage() {
   return (
     <div className="app-layout">
       <main className="main-content">
-        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Productos" subtitle="Catálogo de productos y empaques por componente" />
+        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Productos Maestro" subtitle="Catálogo de productos y empaques por componente" />
         <div className="page-content">
           <div className="page-toolbar">
             <button className="btn-primary" onClick={openAddModal}>➕ Agregar Producto</button>

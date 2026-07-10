@@ -2,11 +2,11 @@ import Link from 'next/link'
 import PageHeader from '../../components/PageHeader'
 
 const DATA_MAESTRA = [
-  { href: '/reforzados/productos', icon: '📦', title: 'Productos', desc: 'Catálogo de productos y empaques', accent: 'accent-blue' },
-  { href: '/reforzados/menus', icon: '🍽️', title: 'Menús', desc: 'Composición de menús por ciclo', accent: 'accent-orange' },
-  { href: '/reforzados/ciclos', icon: '📅', title: 'Ciclos', desc: 'Calendario de ciclos y menús', accent: 'accent-purple' },
-  { href: '/reforzados/sitios', icon: '📍', title: 'Sitios de Entrega', desc: 'Puntos y direcciones de entrega', accent: 'accent-green' },
-  { href: '/reforzados/repartidores', icon: '🚚', title: 'Repartidores', desc: 'Conductores y rutas asignadas', accent: 'accent-yellow' },
+  { href: '/reforzados/productos', icon: '📦', title: 'Productos Maestro', desc: 'Catálogo de productos y empaques', accent: 'accent-blue' },
+  { href: '/reforzados/menus', icon: '🍽️', title: 'Menús Maestro', desc: 'Composición de menús por ciclo', accent: 'accent-orange' },
+  { href: '/reforzados/ciclos', icon: '📅', title: 'Ciclos Maestro', desc: 'Calendario de ciclos y menús', accent: 'accent-purple' },
+  { href: '/reforzados/sitios', icon: '📍', title: 'Sitios Maestro', desc: 'Puntos y direcciones de entrega', accent: 'accent-green' },
+  { href: '/reforzados/repartidores', icon: '🚚', title: 'Repartidores Maestro', desc: 'Conductores y rutas asignadas', accent: 'accent-yellow' },
 ]
 
 const OPERACIONES_DEL_DIA = [

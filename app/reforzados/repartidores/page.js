@@ -5,7 +5,7 @@ export default function RepartidoresPage() {
     <ComingSoon
       backHref="/reforzados"
       backLabel="Reforzados"
-      title="Repartidores"
+      title="Repartidores Maestro"
       subtitle="Control Logística"
     />
   )

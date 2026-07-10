@@ -5,7 +5,7 @@ export default function SitiosPage() {
     <ComingSoon
       backHref="/reforzados"
       backLabel="Reforzados"
-      title="Sitios de Entrega"
+      title="Sitios Maestro"
       subtitle="Control Logística"
     />
   )

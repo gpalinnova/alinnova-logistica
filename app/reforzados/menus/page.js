@@ -5,7 +5,7 @@ export default function MenusPage() {
     <ComingSoon
       backHref="/reforzados"
       backLabel="Reforzados"
-      title="Menús"
+      title="Menús Maestro"
       subtitle="Control Logística"
     />
   )
