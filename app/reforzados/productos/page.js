@@ -90,7 +90,6 @@ export default function ProductosPage() {
           const rows = ['TIPO 1', 'TIPO 2'].map(tipo => ({
             componente: formData.componente,
             nombre: formData.nombre,
-            empaque_texto: formData.empaque_texto,
             unidades_por_canastilla: formData.unidades_por_canastilla,
             tipo,
           }))
@@ -100,7 +99,6 @@ export default function ProductosPage() {
           const { error } = await supabase.from('reforzados_productos').insert([{
             componente: formData.componente,
             nombre: formData.nombre,
-            empaque_texto: formData.empaque_texto,
             unidades_por_canastilla: formData.unidades_por_canastilla,
             tipo: null,
           }])
@@ -110,7 +108,6 @@ export default function ProductosPage() {
         const { error } = await supabase.from('reforzados_productos')
           .update({
             nombre: formData.nombre,
-            empaque_texto: formData.empaque_texto,
             unidades_por_canastilla: formData.unidades_por_canastilla,
             updated_at: new Date().toISOString(),
           })

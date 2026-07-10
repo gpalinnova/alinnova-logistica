@@ -7,13 +7,16 @@ const COMPONENTE_OPTIONS = ['BEBIDA UHT', 'AGUA', 'PROTEICO', 'POSTRE', 'FRUTA']
 export default function ProductoModal({ mode, initialData, onClose, onSubmit, saving }) {
   const [componente, setComponente] = useState(initialData?.componente || COMPONENTE_OPTIONS[0])
   const [nombre, setNombre] = useState(initialData?.nombre || '')
-  const [empaqueTexto, setEmpaqueTexto] = useState(initialData?.empaque_texto || '')
   const [unidades, setUnidades] = useState(initialData?.unidades_por_canastilla ?? '')
   const [error, setError] = useState('')
 
+  const empaquePreview = Number.isInteger(Number(unidades)) && Number(unidades) > 0
+    ? `CANASTILLA X ${Number(unidades)} UNIDADES`
+    : 'CANASTILLA X [N] UNIDADES'
+
   function handleSubmit(e) {
     e.preventDefault()
-    if (!nombre.trim() || !empaqueTexto.trim() || !unidades) {
+    if (!nombre.trim() || !unidades) {
       setError('Completa todos los campos')
       return
     }
@@ -26,7 +29,6 @@ export default function ProductoModal({ mode, initialData, onClose, onSubmit, sa
     onSubmit({
       componente,
       nombre: nombre.trim(),
-      empaque_texto: empaqueTexto.trim(),
       unidades_por_canastilla: unidadesNum,
     })
   }
@@ -47,12 +49,9 @@ export default function ProductoModal({ mode, initialData, onClose, onSubmit, sa
             <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Néctar de durazno" />
           </div>
           <div className="form-group">
-            <label>Empaque</label>
-            <input type="text" value={empaqueTexto} onChange={e => setEmpaqueTexto(e.target.value)} placeholder="Ej: CANASTILLA X 100 UNIDADES" />
-          </div>
-          <div className="form-group">
             <label>Unidades por canastilla</label>
             <input type="number" min="1" value={unidades} onChange={e => setUnidades(e.target.value)} />
+            <p className="modal-hint">Se guardará como: {empaquePreview}</p>
           </div>
           {componente === 'PROTEICO' && mode === 'add' && (
             <p className="modal-hint">Se crearán automáticamente dos registros: TIPO 1 y TIPO 2.</p>
