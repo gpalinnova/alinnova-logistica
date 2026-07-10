@@ -11,8 +11,7 @@ const DATA_MAESTRA = [
 ]
 
 const OPERACIONES_DEL_DIA = [
-  { href: '/reforzados/tabla-whatsapp', icon: '💬', title: 'Menú del Día', desc: 'Reporte diario para reparto', accent: 'accent-whatsapp' },
-  { href: '/reforzados/tabla-rutas', icon: '🚛', title: 'Ruta del Día', desc: 'Reporte diario para reparto', accent: 'accent-blue' },
+  { href: '/reforzados/envio-dia', icon: '📤', title: 'Envío del Día', desc: 'Reporte diario para grupos', accent: 'accent-whatsapp' },
 ]
 
 function NavCard({ href, icon, title, desc, accent }) {

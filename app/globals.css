@@ -1380,6 +1380,25 @@ a {
   color: #1e1b4b;
 }
 
+/* ── Envío del Día ── */
+.envio-bloque {
+  max-width: 900px;
+}
+
+.envio-bloque-header {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #3D1F3D;
+  margin-bottom: 14px;
+}
+
+.envio-bloque-separator {
+  height: 1px;
+  background: rgba(61,31,61,0.12);
+  margin: 36px 0;
+  max-width: 900px;
+}
+
 /* ── Dropzone hint ── */
 .dropzone-hint {
   font-size: 0.78rem;
