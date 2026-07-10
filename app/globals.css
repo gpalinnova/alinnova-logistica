@@ -1187,6 +1187,52 @@ a {
   cursor: not-allowed;
 }
 
+/* ── Dropzone hint ── */
+.dropzone-hint {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  margin-top: 14px;
+}
+
+/* ── Base de Suministro: card de estadísticas ── */
+.bs-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.bs-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bs-stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #3D1F3D;
+}
+
+.bs-stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Fila con novedad especial ── */
+.data-table tr.row-novedad td {
+  background: #FFF9E0;
+}
+
+/* ── Selector de mes (cargas recientes) ── */
+.bs-month-select {
+  max-width: 240px;
+  margin-bottom: 20px;
+}
+
 /* ══════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════ */
