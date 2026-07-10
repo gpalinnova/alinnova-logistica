@@ -145,7 +145,7 @@ export default function TablaWhatsappPage() {
         <PageHeader
           backHref="/reforzados"
           backLabel="Reforzados"
-          title="Tabla WhatsApp"
+          title="Menú del Día"
           subtitle="Genera la tabla diaria del complemento reforzado para enviar al grupo"
         />
         <div className="page-content">

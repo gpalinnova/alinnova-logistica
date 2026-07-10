@@ -11,8 +11,8 @@ const DATA_MAESTRA = [
 
 const OPERACIONES_DEL_DIA = [
   { href: '/reforzados/base-suministro', icon: '📥', title: 'Base de Suministro', desc: 'Cargue de información diaria', accent: 'accent-cyan' },
-  { href: '/reforzados/tabla-whatsapp', icon: '💬', title: 'Tabla WhatsApp', desc: 'Reporte diario para reparto', accent: 'accent-whatsapp' },
-  { href: '/reforzados/tabla-rutas', icon: '🚛', title: 'Tabla de Rutas', desc: 'Reporte diario para reparto', accent: 'accent-blue' },
+  { href: '/reforzados/tabla-whatsapp', icon: '💬', title: 'Menú del Día', desc: 'Reporte diario para reparto', accent: 'accent-whatsapp' },
+  { href: '/reforzados/tabla-rutas', icon: '🚛', title: 'Ruta del Día', desc: 'Reporte diario para reparto', accent: 'accent-blue' },
 ]
 
 function NavCard({ href, icon, title, desc, accent }) {

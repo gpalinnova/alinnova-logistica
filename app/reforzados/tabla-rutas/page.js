@@ -162,7 +162,7 @@ export default function TablaRutasPage() {
         <PageHeader
           backHref="/reforzados"
           backLabel="Reforzados"
-          title="Tabla de Rutas"
+          title="Ruta del Día"
           subtitle="Genera el reporte diario de rutas del complemento reforzado"
         />
         <div className="page-content">
