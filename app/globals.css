@@ -1284,7 +1284,7 @@ a {
 }
 
 .rutas-table-wrap {
-  overflow-x: auto;
+  overflow-x: visible;
   margin-bottom: 24px;
 }
 
@@ -1327,8 +1327,7 @@ a {
 .rt-export-wrap {
   background: #fff;
   padding: 24px;
-  width: fit-content;
-  min-width: 100%;
+  width: 100%;
 }
 
 .rt-titulo {
@@ -1342,6 +1341,7 @@ a {
 
 .rutas-table {
   border-collapse: collapse;
+  table-layout: fixed;
   width: 100%;
   background: #fff;
   font-family: Arial, 'Segoe UI', sans-serif;
@@ -1350,23 +1350,24 @@ a {
 .rutas-table th,
 .rutas-table td {
   border: 1px solid #000;
-  padding: 14px 18px;
-  font-size: 0.85rem;
+  padding: 4px 6px;
+  font-size: 11px;
   color: #1a1a2e;
   vertical-align: middle;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .rutas-table thead th {
   background: #eceff1;
   font-weight: 800;
   text-align: center;
-  white-space: nowrap;
+  font-size: 12px;
   border-bottom: 2px solid #000;
 }
 
 .rt-conductor-cell {
   font-weight: 700;
-  white-space: nowrap;
 }
 
 .rt-subtotal-row td {
@@ -1633,8 +1634,8 @@ a {
 
   .rutas-table th,
   .rutas-table td {
-    padding: 8px 10px;
-    font-size: 0.78rem;
+    padding: 3px 4px;
+    font-size: 9px;
   }
 
   .rt-export-wrap {

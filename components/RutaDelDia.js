@@ -107,6 +107,19 @@ export default function RutaDelDia({ fecha, onStatus }) {
       <div className="rt-export-wrap">
         <div className="rt-titulo">{tituloTabla}</div>
         <table className="rutas-table">
+          <colgroup>
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '22%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '5%' }} />
+            <col style={{ width: '4%' }} />
+            <col style={{ width: '4%' }} />
+            <col style={{ width: '10%' }} />
+          </colgroup>
           <thead>
             <tr>
               <th rowSpan={2}>CONDUCTOR</th>
@@ -151,7 +164,7 @@ export default function RutaDelDia({ fecha, onStatus }) {
                   </tr>
                 ))}
                 <tr className="rt-subtotal-row">
-                  <td colSpan={8}>SUBTOTAL {c.conductor}</td>
+                  <td colSpan={8}>SUBTOTAL - {c.conductor}</td>
                   <td>{c.subtotalTipo1}</td>
                   <td>{c.subtotalTipo2}</td>
                   <td></td>
