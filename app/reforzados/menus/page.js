@@ -135,7 +135,7 @@ export default function MenusPage() {
   return (
     <div className="app-layout">
       <main className="main-content">
-        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Menús Maestro" subtitle="Composición fija de los 10 menús rotativos" />
+        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Menús" subtitle="Composición fija de los 10 menús rotativos" />
         <div className="page-content">
           <div className="page-toolbar">
             <button className="btn-secondary" onClick={() => setConfirmResync(true)} disabled={loading}>

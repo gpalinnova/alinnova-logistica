@@ -179,7 +179,7 @@ export default function CiclosPage() {
   return (
     <div className="app-layout">
       <main className="main-content">
-        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Ciclos Maestro" subtitle="Gestión de rotación de menús por mes" />
+        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Ciclos" subtitle="Gestión de rotación de menús por mes" />
         <div className="page-content">
           {errorMsg && <div className="form-error-banner">{errorMsg}</div>}
 

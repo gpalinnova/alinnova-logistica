@@ -346,7 +346,7 @@ export default function RutasPage() {
   return (
     <div className="app-layout">
       <main className="main-content">
-        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Rutas Maestro" subtitle="Asignación mensual de conductores y sitios" />
+        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Rutas" subtitle="Asignación mensual de conductores y sitios" />
         <div className="page-content">
           {errorMsg && <div className="form-error-banner">{errorMsg}</div>}
 

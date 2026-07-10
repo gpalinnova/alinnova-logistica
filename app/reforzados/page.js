@@ -2,11 +2,11 @@ import Link from 'next/link'
 import PageHeader from '../../components/PageHeader'
 
 const DATA_MAESTRA = [
-  { href: '/reforzados/productos', icon: '📦', title: 'Productos Maestro', desc: 'Productos y embalaje', accent: 'accent-blue' },
-  { href: '/reforzados/menus', icon: '🍽️', title: 'Menús Maestro', desc: 'Menús', accent: 'accent-orange' },
-  { href: '/reforzados/ciclos', icon: '📅', title: 'Ciclos Maestro', desc: 'Ciclos mensuales', accent: 'accent-purple' },
-  { href: '/reforzados/sitios', icon: '📍', title: 'Sitios Maestro', desc: 'ID sitios entrega', accent: 'accent-green' },
-  { href: '/reforzados/rutas', icon: '🚚', title: 'Rutas Maestro', desc: 'Rutas', accent: 'accent-yellow' },
+  { href: '/reforzados/productos', icon: '📦', title: 'Productos', desc: 'Productos y embalaje', accent: 'accent-blue' },
+  { href: '/reforzados/menus', icon: '🍽️', title: 'Menús', desc: 'Menús', accent: 'accent-orange' },
+  { href: '/reforzados/ciclos', icon: '📅', title: 'Ciclos', desc: 'Ciclos mensuales', accent: 'accent-purple' },
+  { href: '/reforzados/sitios', icon: '📍', title: 'Sitios', desc: 'ID sitios entrega', accent: 'accent-green' },
+  { href: '/reforzados/rutas', icon: '🚚', title: 'Rutas', desc: 'Rutas', accent: 'accent-yellow' },
   { href: '/reforzados/base-suministro', icon: '📥', title: 'Base de Suministro', desc: 'Cargue diario de cantidades por sitio', accent: 'accent-cyan' },
 ]
 

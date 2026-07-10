@@ -99,7 +99,7 @@ export default function SitiosPage() {
   return (
     <div className="app-layout">
       <main className="main-content">
-        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Sitios Maestro" subtitle="Sitios de entrega (IDs de la base de suministro)" />
+        <PageHeader backHref="/reforzados" backLabel="Reforzados" title="Sitios" subtitle="Sitios de entrega (IDs de la base de suministro)" />
         <div className="page-content">
           <div className="page-toolbar spread">
             <div className="toolbar-search">
