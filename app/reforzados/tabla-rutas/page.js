@@ -6,7 +6,13 @@ import PageHeader from '../../../components/PageHeader'
 import Toast from '../../../components/Toast'
 import { supabase } from '../../../lib/supabase'
 import { todayLocalISO, formatFechaLarga } from '../../../lib/tablaWhatsappUtils'
-import { buildTituloTabla, buildRutasData, buildRutasAsciiText } from '../../../lib/tablaRutasUtils'
+import {
+  buildTituloTabla,
+  buildRutasData,
+  buildRutasAsciiText,
+  buildInterventorias,
+  buildInterventoriasText,
+} from '../../../lib/tablaRutasUtils'
 
 export default function TablaRutasPage() {
   const [selectedDate, setSelectedDate] = useState(todayLocalISO())
@@ -22,7 +28,10 @@ export default function TablaRutasPage() {
   const [copying, setCopying] = useState(false)
   const [exportingImage, setExportingImage] = useState(false)
   const [exportingPdf, setExportingPdf] = useState(false)
+  const [copyingInterv, setCopyingInterv] = useState(false)
+  const [exportingIntervImage, setExportingIntervImage] = useState(false)
   const tableRef = useRef(null)
+  const intervRef = useRef(null)
 
   useEffect(() => {
     async function fetchInitial() {
@@ -93,15 +102,23 @@ export default function TablaRutasPage() {
     return result
   }, [rutaAplica, rutaActiva, baseRows, baseLoading, fechaDisplay])
 
+  const sitiosById = useMemo(() => new Map(sitios.map(s => [s.id_sitio_entrega, s])), [sitios])
+
   const tableData = useMemo(() => {
     if (!rutaAplica || asignaciones.length === 0) return null
-    const sitiosById = new Map(sitios.map(s => [s.id_sitio_entrega, s]))
     const baseByIdSitio = new Map(baseRows.map(b => [b.id_sitio_entrega, b]))
     return buildRutasData(asignaciones, sitiosById, baseByIdSitio)
-  }, [rutaAplica, asignaciones, sitios, baseRows])
+  }, [rutaAplica, asignaciones, sitiosById, baseRows])
 
   const loading = loadingInicial || asigLoading || baseLoading
   const canExport = !loading && rutaAplica && baseRows.length > 0 && tableData && tableData.conductores.length > 0
+
+  const interventorias = useMemo(() => {
+    const asignacionBySitio = rutaAplica
+      ? new Map(asignaciones.map(a => [a.id_sitio_entrega, a]))
+      : new Map()
+    return buildInterventorias(baseRows, sitiosById, asignacionBySitio)
+  }, [baseRows, sitiosById, asignaciones, rutaAplica])
 
   async function handleCopyText() {
     if (!canExport) return
@@ -153,6 +170,41 @@ export default function TablaRutasPage() {
       setToast({ message: 'No se pudo generar el PDF.', type: 'error' })
     } finally {
       setExportingPdf(false)
+    }
+  }
+
+  async function handleCopyInterventorias() {
+    if (interventorias.length === 0) return
+    setCopyingInterv(true)
+    try {
+      const text = buildInterventoriasText(interventorias)
+      await navigator.clipboard.writeText(text)
+      setToast({ message: 'Mensaje copiado al portapapeles.', type: 'success' })
+    } catch (err) {
+      setToast({ message: 'No se pudo copiar el mensaje.', type: 'error' })
+    } finally {
+      setCopyingInterv(false)
+    }
+  }
+
+  async function handleDownloadInterventoriasImage() {
+    if (!intervRef.current) return
+    setExportingIntervImage(true)
+    try {
+      const { toPng } = await import('html-to-image')
+      const dataUrl = await toPng(intervRef.current, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        filter: node => !node.classList || !node.classList.contains('interv-no-export'),
+      })
+      const link = document.createElement('a')
+      link.download = `Interventorias_${selectedDate}.png`
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      setToast({ message: 'No se pudo generar la imagen.', type: 'error' })
+    } finally {
+      setExportingIntervImage(false)
     }
   }
 
@@ -267,6 +319,49 @@ export default function TablaRutasPage() {
                 </table>
               </div>
             </div>
+          )}
+
+          {!loading && baseRows.length > 0 && (
+            <>
+              <div className="section-label">🔍 Interventorías del Día</div>
+              {interventorias.length === 0 ? (
+                <div className="empty-state"><p>No hay interventorías registradas para esta fecha.</p></div>
+              ) : (
+                <>
+                  <div className="card interv-card" ref={intervRef}>
+                    {!rutaAplica && (
+                      <div className="ciclo-status-badge ciclo-status-warn interv-warning">
+                        ⚠️ Falta la ruta activa para saber quién es el conductor de estos sitios.
+                      </div>
+                    )}
+                    {interventorias.map(b => (
+                      <div key={b.idSitio} className="interv-block">
+                        <div className="interv-block-title">
+                          {b.sinAsignar && '⚠️ '}
+                          {b.tipo
+                            ? `Interventoria Tipo ${b.tipo} - Conductor ${b.conductor}`
+                            : `Interventoría - Conductor ${b.conductor}`}
+                        </div>
+                        <div className="interv-block-detail">COLEGIO {b.nombreInstitucion}</div>
+                        <div className="interv-block-detail">CONDUCTOR: {b.conductor}</div>
+                        <div className="interv-block-detail">AUXILIAR: {b.auxiliar}</div>
+                        <div className="interv-block-detail">VEHICULO: {b.placa}</div>
+                      </div>
+                    ))}
+                    <div className="tw-actions interv-actions interv-no-export">
+                      <button className="btn-tw-action" onClick={handleCopyInterventorias} disabled={copyingInterv}>
+                        📋 {copyingInterv ? 'Copiando...' : 'Copiar mensaje completo'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="tw-actions">
+                    <button className="btn-secondary" onClick={handleDownloadInterventoriasImage} disabled={exportingIntervImage}>
+                      📸 {exportingIntervImage ? 'Generando...' : 'Descargar como imagen'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
           )}
 
           <div className="section-label">Acciones</div>

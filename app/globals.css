@@ -1225,6 +1225,42 @@ a {
   margin-bottom: 24px;
 }
 
+/* ── Interventorías del Día ── */
+.interv-card {
+  margin-bottom: 12px;
+}
+
+.interv-warning {
+  margin-bottom: 18px;
+}
+
+.interv-block {
+  padding-bottom: 14px;
+}
+
+.interv-block + .interv-block {
+  border-top: 1px solid #ede8f3;
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.interv-block-title {
+  font-weight: 800;
+  color: #3D1F3D;
+  margin-bottom: 6px;
+}
+
+.interv-block-detail {
+  font-size: 0.92rem;
+  color: #333;
+  line-height: 1.6;
+}
+
+.interv-actions {
+  margin-top: 20px;
+  margin-bottom: 0;
+}
+
 .rt-export-wrap {
   background: #fff;
   padding: 24px;
