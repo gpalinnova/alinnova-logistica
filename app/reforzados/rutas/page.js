@@ -6,6 +6,7 @@ import ConfirmModal from '../../../components/ConfirmModal'
 import Toast from '../../../components/Toast'
 import RutaPreviewModal from '../../../components/RutaPreviewModal'
 import RutaDetalleModal from '../../../components/RutaDetalleModal'
+import RutaEditModal from '../../../components/RutaEditModal'
 import { supabase } from '../../../lib/supabase'
 import { parseRutasExcel, readFileAsArrayBuffer, detectMesAnioFromFilename } from '../../../lib/parseRutasExcel'
 import { descargarPlantillaRutas } from '../../../lib/rutasTemplate'
@@ -32,6 +33,11 @@ export default function RutasPage() {
   const [detalle, setDetalle] = useState(null)
   const [detalleAsignaciones, setDetalleAsignaciones] = useState([])
   const [detalleLoading, setDetalleLoading] = useState(false)
+  const [editando, setEditando] = useState(null)
+  const [editandoAsignaciones, setEditandoAsignaciones] = useState([])
+  const [editandoLoading, setEditandoLoading] = useState(false)
+  const [editandoSaving, setEditandoSaving] = useState(false)
+  const [editandoError, setEditandoError] = useState('')
   const fileInputRef = useRef(null)
 
   useEffect(() => { fetchSitios(); fetchRutas() }, [])
@@ -43,7 +49,7 @@ export default function RutasPage() {
   }, [sitios])
 
   async function fetchSitios() {
-    const { data, error } = await supabase.from('reforzados_sitios').select('id_sitio_entrega, nombre_institucion, direccion, localidad')
+    const { data, error } = await supabase.from('reforzados_sitios').select('id_sitio_entrega, nombre_institucion, direccion, localidad, activo')
     if (!error) setSitios(data || [])
   }
 
@@ -222,6 +228,105 @@ export default function RutasPage() {
     setDetalleAsignaciones([])
   }
 
+  async function openEditar(ruta) {
+    setEditando(ruta)
+    setEditandoAsignaciones([])
+    setEditandoError('')
+    setEditandoLoading(true)
+    const { data, error } = await supabase
+      .from('reforzados_ruta_asignaciones')
+      .select('*, repartidor:reforzados_repartidores(id, conductor, placa, auxiliar)')
+      .eq('ruta_mes_id', ruta.id)
+      .order('orden_entrega')
+    if (!error) setEditandoAsignaciones(data || [])
+    setEditandoLoading(false)
+  }
+
+  function closeEditar() {
+    if (editandoSaving) return
+    setEditando(null)
+    setEditandoAsignaciones([])
+    setEditandoError('')
+  }
+
+  async function checkDuplicadoRepartidor(conductor, placa, excludeId) {
+    const { data } = await supabase.from('reforzados_repartidores').select('id').eq('conductor', conductor).eq('placa', placa)
+    return (data || []).some(r => r.id !== excludeId)
+  }
+
+  async function handleGuardarEdicion(diff) {
+    setEditandoSaving(true)
+    setEditandoError('')
+    try {
+      const repartidorIdByTempKey = new Map()
+      if (diff.repartidorInserts.length > 0) {
+        const payload = diff.repartidorInserts.map(r => ({ conductor: r.conductor, auxiliar: r.auxiliar, placa: r.placa }))
+        const { data: inserted, error } = await supabase.from('reforzados_repartidores').insert(payload).select('id')
+        if (error) throw error
+        diff.repartidorInserts.forEach((r, i) => repartidorIdByTempKey.set(r.tempKey, inserted[i].id))
+      }
+
+      for (const r of diff.repartidorUpdates) {
+        const { error } = await supabase.from('reforzados_repartidores')
+          .update({ conductor: r.conductor, auxiliar: r.auxiliar, placa: r.placa, updated_at: new Date().toISOString() })
+          .eq('id', r.id)
+        if (error) throw error
+      }
+
+      if (diff.asignacionInserts.length > 0) {
+        const { error } = await supabase.from('reforzados_ruta_asignaciones').insert(diff.asignacionInserts)
+        if (error) throw error
+      }
+
+      const nuevasParaNuevos = []
+      for (const r of diff.repartidorInserts) {
+        const repartidorId = repartidorIdByTempKey.get(r.tempKey)
+        for (const a of r.asignaciones) {
+          nuevasParaNuevos.push({
+            ruta_mes_id: editando.id,
+            repartidor_id: repartidorId,
+            id_sitio_entrega: a.id_sitio_entrega,
+            orden_entrega: a.orden_entrega,
+            cargue_alinnova: a.cargue_alinnova,
+            horario_entrega_alinnova: a.horario_entrega_alinnova,
+          })
+        }
+      }
+      if (nuevasParaNuevos.length > 0) {
+        const { error } = await supabase.from('reforzados_ruta_asignaciones').insert(nuevasParaNuevos)
+        if (error) throw error
+      }
+
+      for (const a of diff.asignacionUpdates) {
+        const { error } = await supabase.from('reforzados_ruta_asignaciones')
+          .update({ orden_entrega: a.orden_entrega, cargue_alinnova: a.cargue_alinnova, horario_entrega_alinnova: a.horario_entrega_alinnova })
+          .eq('id', a.id)
+        if (error) throw error
+      }
+
+      if (diff.asignacionDeletes.length > 0) {
+        const { error } = await supabase.from('reforzados_ruta_asignaciones').delete().in('id', diff.asignacionDeletes)
+        if (error) throw error
+      }
+
+      for (const r of diff.repartidorDeletes) {
+        const { count } = await supabase.from('reforzados_ruta_asignaciones').select('id', { count: 'exact', head: true }).eq('repartidor_id', r.id)
+        if (!count) {
+          await supabase.from('reforzados_repartidores').delete().eq('id', r.id)
+        }
+      }
+
+      await fetchRutas()
+      setEditando(null)
+      setEditandoAsignaciones([])
+      setToast({ message: 'Cambios guardados correctamente.', type: 'success' })
+    } catch (err) {
+      setEditandoError(err.code === '23505' ? 'Ya existe un repartidor con ese conductor y placa.' : 'No se pudieron guardar los cambios de la ruta.')
+    } finally {
+      setEditandoSaving(false)
+    }
+  }
+
   return (
     <div className="app-layout">
       <main className="main-content">
@@ -278,6 +383,7 @@ export default function RutasPage() {
                     <button className="btn-desactivar" onClick={() => askDesactivar(ruta)}>⏸️ Desactivar</button>
                   )}
                   <button className="btn-secondary" onClick={() => openDetalle(ruta)}>👁️ Ver Detalle</button>
+                  <button className="btn-secondary" onClick={() => openEditar(ruta)}>✏️ Editar</button>
                   <button className="btn-danger" onClick={() => askEliminar(ruta)}>🗑️ Eliminar</button>
                 </div>
               </div>
@@ -326,6 +432,21 @@ export default function RutasPage() {
           sitiosById={sitiosById}
           loading={detalleLoading}
           onClose={closeDetalle}
+        />
+      )}
+
+      {editando && (
+        <RutaEditModal
+          ruta={editando}
+          asignaciones={editandoAsignaciones}
+          sitios={sitios}
+          sitiosById={sitiosById}
+          loading={editandoLoading}
+          saving={editandoSaving}
+          error={editandoError}
+          onClose={closeEditar}
+          onGuardar={handleGuardarEdicion}
+          onCheckDuplicado={checkDuplicadoRepartidor}
         />
       )}
 

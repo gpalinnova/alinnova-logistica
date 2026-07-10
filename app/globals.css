@@ -1410,4 +1410,91 @@ a {
   .btn-tw-action {
     flex: 1 1 auto;
   }
+
+  .modal-box-xl {
+    padding: 20px;
+  }
+
+  .ruta-edit-block-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Modal edición de ruta (Rutas Maestro) ── */
+.modal-box-xl {
+  max-width: 1000px;
+}
+
+.ruta-edit-block {
+  background: #faf9fb;
+  border: 1px solid #ede8f3;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.ruta-edit-block.is-deleted {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.ruta-edit-block-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.ruta-edit-block-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0 14px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.ruta-edit-add-form {
+  background: #fff;
+  border: 1px dashed #c9c2d6;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 14px;
+}
+
+.ruta-edit-new-block {
+  border: 1px dashed #c9c2d6;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.table-input {
+  width: 100%;
+  min-width: 70px;
+  padding: 6px 8px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.83rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a2e;
+}
+
+.table-input:focus {
+  outline: none;
+  border-color: #3D1F3D;
+}
+
+.table-input:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.data-table tr.row-eliminado td {
+  background: #fef2f2;
+  color: #b91c1c;
+  text-decoration: line-through;
 }
