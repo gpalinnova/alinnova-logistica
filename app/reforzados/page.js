@@ -6,7 +6,7 @@ const DATA_MAESTRA = [
   { href: '/reforzados/menus', icon: '🍽️', title: 'Menús Maestro', desc: 'Composición de menús por ciclo', accent: 'accent-orange' },
   { href: '/reforzados/ciclos', icon: '📅', title: 'Ciclos Maestro', desc: 'Calendario de ciclos y menús', accent: 'accent-purple' },
   { href: '/reforzados/sitios', icon: '📍', title: 'Sitios Maestro', desc: 'Puntos y direcciones de entrega', accent: 'accent-green' },
-  { href: '/reforzados/repartidores', icon: '🚚', title: 'Repartidores Maestro', desc: 'Conductor, auxiliar y placa por unidad', accent: 'accent-yellow' },
+  { href: '/reforzados/rutas', icon: '🚚', title: 'Rutas Maestro', desc: 'Asignación mensual de conductores y sitios', accent: 'accent-yellow' },
 ]
 
 const OPERACIONES_DEL_DIA = [
