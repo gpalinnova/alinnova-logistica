@@ -28,6 +28,7 @@ export default function BaseSuministroDetalleModal({ fecha, filas, sitiosById, l
                   <th>B</th>
                   <th>C</th>
                   <th>D</th>
+                  <th>N</th>
                   <th>Muestras</th>
                   <th>Total</th>
                   <th>Observación</th>
@@ -47,6 +48,7 @@ export default function BaseSuministroDetalleModal({ fecha, filas, sitiosById, l
                       <td>{f.tipo_b}</td>
                       <td>{f.tipo_c}</td>
                       <td>{f.tipo_d}</td>
+                      <td>{f.tipo_n || 0}</td>
                       <td>{f.muestra_tipo_1 + f.muestra_tipo_2}</td>
                       <td>{f.total}</td>
                       <td>{f.observacion || '-'}</td>

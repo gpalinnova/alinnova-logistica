@@ -7,7 +7,7 @@ import Toast from '../../../components/Toast'
 import BaseSuministroPreviewModal from '../../../components/BaseSuministroPreviewModal'
 import BaseSuministroDetalleModal from '../../../components/BaseSuministroDetalleModal'
 import { supabase } from '../../../lib/supabase'
-import { parseBaseSuministroExcel, readFileAsArrayBuffer, detectFechaFromFilename } from '../../../lib/parseBaseSuministro'
+import { parseBaseSuministroExcel, readFileAsArrayBuffer } from '../../../lib/parseBaseSuministro'
 import { formatFechaLarga } from '../../../lib/tablaWhatsappUtils'
 
 const MESES_ES = [
@@ -34,7 +34,7 @@ function aggregateByFecha(rows) {
   for (const r of rows) {
     let s = map.get(r.fecha)
     if (!s) {
-      s = { fecha: r.fecha, sitios: 0, total: 0, tipo1: 0, tipo2: 0, muestras: 0 }
+      s = { fecha: r.fecha, sitios: 0, total: 0, tipo1: 0, tipo2: 0, muestras: 0, tipoN: 0 }
       map.set(r.fecha, s)
     }
     s.sitios += 1
@@ -42,6 +42,7 @@ function aggregateByFecha(rows) {
     s.tipo1 += r.tipo_1_total || 0
     s.tipo2 += r.tipo_2_total || 0
     s.muestras += (r.muestra_tipo_1 || 0) + (r.muestra_tipo_2 || 0)
+    s.tipoN += r.tipo_n || 0
   }
   return Array.from(map.values()).sort((a, b) => b.fecha.localeCompare(a.fecha))
 }
@@ -113,8 +114,7 @@ export default function BaseSuministroPage() {
     try {
       const buffer = await readFileAsArrayBuffer(file)
       const data = parseBaseSuministroExcel(buffer, file.name)
-      const fechaDetectada = detectFechaFromFilename(file.name)
-      setPreview({ data, archivoNombre: file.name, fechaDetectada })
+      setPreview({ data, archivoNombre: file.name, fechaDetectada: data.fechaSugerida })
     } catch (err) {
       setErrorMsg(err.message || 'No se pudo leer el archivo Excel.')
     } finally {
@@ -183,6 +183,7 @@ export default function BaseSuministroPage() {
         tipo_b: f.tipo_b,
         tipo_c: f.tipo_c,
         tipo_d: f.tipo_d,
+        tipo_n: f.tipo_n,
         muestra_tipo_1: f.muestra_tipo_1,
         muestra_tipo_2: f.muestra_tipo_2,
         dia_semana: f.dia_semana,
@@ -194,7 +195,7 @@ export default function BaseSuministroPage() {
       const { error: insBaseError } = await supabase.from('reforzados_base_suministro').insert(rows)
       if (insBaseError) throw insBaseError
 
-      const totalUnidades = rows.reduce((sum, r) => sum + r.tipo_a + r.tipo_b + r.tipo_c + r.tipo_d + r.muestra_tipo_1 + r.muestra_tipo_2, 0)
+      const totalUnidades = rows.reduce((sum, r) => sum + r.tipo_a + r.tipo_b + r.tipo_c + r.tipo_d + r.tipo_n + r.muestra_tipo_1 + r.muestra_tipo_2, 0)
 
       await Promise.all([fetchSitios(), fetchBases()])
       setPreview(null)
@@ -294,6 +295,7 @@ export default function BaseSuministroPage() {
                   <div className="ciclo-card-meta">
                     <span className="badge badge-tipo1">Tipo 1: {b.tipo1.toLocaleString('es-CO')}</span>
                     <span className="badge badge-tipo2">Tipo 2: {b.tipo2.toLocaleString('es-CO')}</span>
+                    {b.tipoN > 0 && <span className="badge">Tipo N: {b.tipoN.toLocaleString('es-CO')}</span>}
                   </div>
                 </div>
                 <div className="ciclo-card-actions">

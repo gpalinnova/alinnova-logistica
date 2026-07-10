@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { formatFechaLarga } from '../lib/tablaWhatsappUtils'
+import { FIELD_LABELS } from '../lib/parseBaseSuministro'
 
 function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1)
@@ -12,17 +13,19 @@ export default function BaseSuministroPreviewModal({ data, archivoNombre, fechaD
 
   const necesitaSeleccion = !fechaDetectada
   const existingBase = fecha ? basesExistentes.get(fecha) : null
+  const meta = data.meta || {}
 
   const stats = useMemo(() => {
-    let total = 0, tipo1 = 0, tipo2 = 0, muestras = 0
+    let total = 0, tipo1 = 0, tipo2 = 0, muestras = 0, tipoN = 0
     for (const f of data.filas) {
-      const t = f.tipo_a + f.tipo_b + f.tipo_c + f.tipo_d + f.muestra_tipo_1 + f.muestra_tipo_2
+      const t = f.tipo_a + f.tipo_b + f.tipo_c + f.tipo_d + f.tipo_n + f.muestra_tipo_1 + f.muestra_tipo_2
       total += t
       tipo1 += f.tipo_a + f.tipo_b + f.muestra_tipo_1
       tipo2 += f.tipo_c + f.tipo_d + f.muestra_tipo_2
       muestras += f.muestra_tipo_1 + f.muestra_tipo_2
+      tipoN += f.tipo_n
     }
-    return { sitios: data.filas.length, total, tipo1, tipo2, muestras }
+    return { sitios: data.filas.length, total, tipo1, tipo2, muestras, tipoN }
   }, [data.filas])
 
   const idsNuevos = useMemo(() => {
@@ -71,11 +74,71 @@ export default function BaseSuministroPreviewModal({ data, archivoNombre, fechaD
             <div className="bs-stat-value">{stats.tipo2.toLocaleString('es-CO')}</div>
             <div className="bs-stat-label">Tipo 2</div>
           </div>
-          <div className="bs-stat">
-            <div className="bs-stat-value">{stats.muestras.toLocaleString('es-CO')}</div>
-            <div className="bs-stat-label">Muestras</div>
-          </div>
+          {meta.tieneMuestras && (
+            <div className="bs-stat">
+              <div className="bs-stat-value">{stats.muestras.toLocaleString('es-CO')}</div>
+              <div className="bs-stat-label">Muestras</div>
+            </div>
+          )}
+          {meta.tieneTipoN && (
+            <div className="bs-stat">
+              <div className="bs-stat-value">{stats.tipoN.toLocaleString('es-CO')}</div>
+              <div className="bs-stat-label">Tipo N</div>
+            </div>
+          )}
         </div>
+
+        {meta.tieneMuestras && (
+          <p className="modal-hint">🧪 Formato con muestras detectado (MUESTRA TIPO 1 / MUESTRA TIPO 2).</p>
+        )}
+        {meta.tieneTipoN && (
+          <p className="modal-hint">🆕 Formato TIPO N detectado.</p>
+        )}
+
+        <details className="bs-mapeo-details">
+          <summary className="bs-mapeo-summary">Detalle del mapeo</summary>
+          <div className="bs-mapeo-body">
+            <div className="bs-mapeo-block">
+              <div className="bs-mapeo-block-title">
+                Formato detectado: Hoja "{meta.sheetName}", fila de encabezado {meta.headerRowNumero}
+              </div>
+              <div className="bs-mapeo-block-title">
+                Columnas encontradas: {meta.columnasEncontradas} de {meta.columnasEsperadas} esperadas
+              </div>
+            </div>
+
+            <div className="bs-mapeo-block">
+              <div className="bs-mapeo-block-title">Campos mapeados</div>
+              <div className="bs-mapeo-list">
+                {Object.entries(meta.camposMapeados || {}).map(([campo, columna]) => (
+                  <span key={campo} className="bs-mapeo-chip">{FIELD_LABELS[campo] || campo} → "{columna}"</span>
+                ))}
+              </div>
+            </div>
+
+            {meta.columnasIgnoradas && meta.columnasIgnoradas.length > 0 && (
+              <div className="bs-mapeo-block">
+                <div className="bs-mapeo-block-title">Columnas del Excel no reconocidas</div>
+                <div className="bs-mapeo-list">
+                  {meta.columnasIgnoradas.map((col, i) => (
+                    <span key={i} className="bs-mapeo-chip">{col}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {meta.camposFaltantes && meta.camposFaltantes.length > 0 && (
+              <div className="bs-mapeo-block">
+                <div className="bs-mapeo-block-title">Campos sin columna equivalente (quedaron vacíos)</div>
+                <div className="bs-mapeo-list">
+                  {meta.camposFaltantes.map(campo => (
+                    <span key={campo} className="bs-mapeo-chip bs-mapeo-chip-warning">{FIELD_LABELS[campo] || campo}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
 
         {idsNuevos.length > 0 && (
           <p className="modal-hint">
@@ -100,7 +163,8 @@ export default function BaseSuministroPreviewModal({ data, archivoNombre, fechaD
                 <th>B</th>
                 <th>C</th>
                 <th>D</th>
-                <th>Muestras</th>
+                {meta.tieneTipoN && <th>N</th>}
+                {meta.tieneMuestras && <th>Muestras</th>}
                 <th>Total</th>
                 <th>Novedad</th>
               </tr>
@@ -114,8 +178,9 @@ export default function BaseSuministroPreviewModal({ data, archivoNombre, fechaD
                   <td>{f.tipo_b}</td>
                   <td>{f.tipo_c}</td>
                   <td>{f.tipo_d}</td>
-                  <td>{f.muestra_tipo_1 + f.muestra_tipo_2}</td>
-                  <td>{f.tipo_a + f.tipo_b + f.tipo_c + f.tipo_d + f.muestra_tipo_1 + f.muestra_tipo_2}</td>
+                  {meta.tieneTipoN && <td>{f.tipo_n}</td>}
+                  {meta.tieneMuestras && <td>{f.muestra_tipo_1 + f.muestra_tipo_2}</td>}
+                  <td>{f.tipo_a + f.tipo_b + f.tipo_c + f.tipo_d + f.tipo_n + f.muestra_tipo_1 + f.muestra_tipo_2}</td>
                   <td>{f.observacion || '-'}</td>
                 </tr>
               ))}

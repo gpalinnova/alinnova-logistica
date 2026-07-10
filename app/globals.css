@@ -1233,6 +1233,85 @@ a {
   margin-bottom: 20px;
 }
 
+/* ── Reporte de mapeo (vista previa Base de Suministro) ── */
+.bs-mapeo-details {
+  border: 1px solid #ede8f3;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.bs-mapeo-summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #3D1F3D;
+  background: #F7F4FA;
+  list-style: none;
+  user-select: none;
+}
+
+.bs-mapeo-summary::-webkit-details-marker {
+  display: none;
+}
+
+.bs-mapeo-summary::before {
+  content: '▸ ';
+}
+
+.bs-mapeo-details[open] .bs-mapeo-summary::before {
+  content: '▾ ';
+}
+
+.bs-mapeo-body {
+  padding: 12px 14px 14px;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.bs-mapeo-block {
+  margin-bottom: 12px;
+}
+
+.bs-mapeo-block:last-child {
+  margin-bottom: 0;
+}
+
+.bs-mapeo-block-title {
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.bs-mapeo-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bs-mapeo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.bs-mapeo-chip-warning {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.bs-mapeo-chip-error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 /* ══════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════ */
