@@ -108,17 +108,17 @@ export default function RutaDelDia({ fecha, onStatus }) {
         <div className="rt-titulo">{tituloTabla}</div>
         <table className="rutas-table">
           <colgroup>
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '6%' }} />
-            <col style={{ width: '22%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '5%' }} />
-            <col style={{ width: '4%' }} />
-            <col style={{ width: '4%' }} />
-            <col style={{ width: '10%' }} />
+            <col style={{ minWidth: '180px' }} />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
           </colgroup>
           <thead>
             <tr>
@@ -158,23 +158,23 @@ export default function RutaDelDia({ fecha, onStatus }) {
                     <td>{f.horarioSugerido}</td>
                     <td>{f.horarioEntregaAlinnova}</td>
                     <td>{f.orden}{f.sinBase ? ' ⚠️' : ''}</td>
-                    <td>{f.sinBase ? '—' : f.tipo1}</td>
-                    <td>{f.sinBase ? '—' : f.tipo2}</td>
+                    <td className="rt-num-cell">{f.sinBase ? '—' : f.tipo1}</td>
+                    <td className="rt-num-cell">{f.sinBase ? '—' : f.tipo2}</td>
                     <td>{f.direccion}</td>
                   </tr>
                 ))}
                 <tr className="rt-subtotal-row">
                   <td colSpan={8}>SUBTOTAL - {c.conductor}</td>
-                  <td>{c.subtotalTipo1}</td>
-                  <td>{c.subtotalTipo2}</td>
+                  <td className="rt-num-cell">{c.subtotalTipo1}</td>
+                  <td className="rt-num-cell">{c.subtotalTipo2}</td>
                   <td></td>
                 </tr>
               </Fragment>
             ))}
             <tr className="rt-total-row">
               <td colSpan={8}>TOTAL GENERAL</td>
-              <td>{tableData.totalTipo1}</td>
-              <td>{tableData.totalTipo2}</td>
+              <td className="rt-num-cell">{tableData.totalTipo1}</td>
+              <td className="rt-num-cell">{tableData.totalTipo2}</td>
               <td></td>
             </tr>
           </tbody>

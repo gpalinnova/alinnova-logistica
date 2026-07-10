@@ -102,7 +102,7 @@ export default function EnvioDelDiaPage() {
 
           <div className="envio-bloque-separator" />
 
-          <div className="envio-bloque">
+          <div className="envio-bloque envio-bloque-ancho">
             <div className="envio-bloque-header">🚛 Ruta del Día</div>
             <RutaDelDia fecha={selectedDate} onStatus={setRutaStatus} />
           </div>
