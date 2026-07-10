@@ -8,7 +8,7 @@ import RutaPreviewModal from '../../../components/RutaPreviewModal'
 import RutaDetalleModal from '../../../components/RutaDetalleModal'
 import RutaEditModal from '../../../components/RutaEditModal'
 import { supabase } from '../../../lib/supabase'
-import { parseRutasExcel, parseRutasPaste, readFileAsArrayBuffer, detectMesAnioFromFilename } from '../../../lib/parseRutasExcel'
+import { parseRutasExcel, parseRutasPaste, readFileAsArrayBuffer, detectMesAnioFromFilename, normalizeHorario } from '../../../lib/parseRutasExcel'
 import { descargarPlantillaRutas } from '../../../lib/rutasTemplate'
 
 function sortRutas(list) {
@@ -290,7 +290,12 @@ export default function RutasPage() {
       }
 
       if (diff.asignacionInserts.length > 0) {
-        const { error } = await supabase.from('reforzados_ruta_asignaciones').insert(diff.asignacionInserts)
+        const payload = diff.asignacionInserts.map(a => ({
+          ...a,
+          cargue_alinnova: normalizeHorario(a.cargue_alinnova),
+          horario_entrega_alinnova: normalizeHorario(a.horario_entrega_alinnova),
+        }))
+        const { error } = await supabase.from('reforzados_ruta_asignaciones').insert(payload)
         if (error) throw error
       }
 
@@ -303,8 +308,8 @@ export default function RutasPage() {
             repartidor_id: repartidorId,
             id_sitio_entrega: a.id_sitio_entrega,
             orden_entrega: a.orden_entrega,
-            cargue_alinnova: a.cargue_alinnova,
-            horario_entrega_alinnova: a.horario_entrega_alinnova,
+            cargue_alinnova: normalizeHorario(a.cargue_alinnova),
+            horario_entrega_alinnova: normalizeHorario(a.horario_entrega_alinnova),
           })
         }
       }
@@ -315,7 +320,7 @@ export default function RutasPage() {
 
       for (const a of diff.asignacionUpdates) {
         const { error } = await supabase.from('reforzados_ruta_asignaciones')
-          .update({ orden_entrega: a.orden_entrega, cargue_alinnova: a.cargue_alinnova, horario_entrega_alinnova: a.horario_entrega_alinnova })
+          .update({ orden_entrega: a.orden_entrega, cargue_alinnova: normalizeHorario(a.cargue_alinnova), horario_entrega_alinnova: normalizeHorario(a.horario_entrega_alinnova) })
           .eq('id', a.id)
         if (error) throw error
       }
