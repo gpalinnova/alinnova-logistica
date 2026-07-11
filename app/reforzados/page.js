@@ -12,6 +12,7 @@ const DATA_MAESTRA = [
 
 const OPERACIONES_DEL_DIA = [
   { href: '/reforzados/envio-dia', icon: '📤', title: 'Envío del Día', desc: 'Reporte diario para grupos', accent: 'accent-whatsapp' },
+  { href: '/reforzados/remisiones', icon: '📄', title: 'Remisiones', desc: 'PDF diario de remisiones por sitio', accent: 'accent-darkgreen' },
 ]
 
 function NavCard({ href, icon, title, desc, accent }) {
