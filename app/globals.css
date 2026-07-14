@@ -1460,6 +1460,31 @@ a {
   background: #FFF9E0;
 }
 
+/* ── Rutero: sitios sin ruta asignada ── */
+.rutero-warning-banner {
+  background: #FFF3E0;
+  border-left: 4px solid #f57c00;
+  color: #92400e;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.data-table tr.row-sin-asignar td {
+  background: #FFF3E0;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.data-table tr.row-sin-asignar-detail td {
+  background: #FFF8EE;
+  color: #92400e;
+  font-size: 0.78rem;
+  padding-left: 32px;
+}
+
 /* ── Selector de mes (cargas recientes) ── */
 .bs-month-select {
   max-width: 240px;

@@ -5,7 +5,7 @@ import PageHeader from '../../../components/PageHeader'
 import Toast from '../../../components/Toast'
 import { supabase } from '../../../lib/supabase'
 import { todayLocalISO } from '../../../lib/tablaWhatsappUtils'
-import { buildMenuDelDia, buildRuteroConductores } from '../../../lib/ruteroCalc'
+import { buildMenuDelDia, buildRuteroConductores, buildSitiosSinAsignar } from '../../../lib/ruteroCalc'
 import { generateRuteroPDF, fmtFechaCorta } from '../../../lib/ruteroPdf'
 
 export default function RuteroPage() {
@@ -21,6 +21,7 @@ export default function RuteroPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [generando, setGenerando] = useState(false)
   const [toast, setToast] = useState(null)
+  const [sinAsignarOpen, setSinAsignarOpen] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -79,12 +80,23 @@ export default function RuteroPage() {
     () => buildRuteroConductores(asignaciones, sitiosById, baseByIdSitio, menuDelDia),
     [asignaciones, sitiosById, baseByIdSitio, menuDelDia]
   )
+  const sinAsignar = useMemo(
+    () => buildSitiosSinAsignar(baseRows, asignaciones, sitiosById),
+    [baseRows, asignaciones, sitiosById]
+  )
 
   const resumen = useMemo(() => {
-    const totalSitios = conductores.reduce((s, c) => s + c.filas.length, 0)
-    const totalUnidades = conductores.reduce((s, c) => s + c.totales.total, 0)
-    return { conductoresCount: conductores.length, totalSitios, totalUnidades }
-  }, [conductores])
+    const totalSitiosAsignados = conductores.reduce((s, c) => s + c.filas.length, 0)
+    const totalUnidadesAsignadas = conductores.reduce((s, c) => s + c.totales.total, 0)
+    const sinAsignarUnidades = sinAsignar.reduce((s, r) => s + r.total, 0)
+    return {
+      conductoresCount: conductores.length,
+      totalSitios: totalSitiosAsignados + sinAsignar.length,
+      totalUnidades: totalUnidadesAsignadas + sinAsignarUnidades,
+      sinAsignarCount: sinAsignar.length,
+      sinAsignarUnidades,
+    }
+  }, [conductores, sinAsignar])
 
   async function handleGenerate() {
     if (conductores.length === 0 || generando) return
@@ -169,6 +181,12 @@ export default function RuteroPage() {
             </div>
           )}
 
+          {resumen.sinAsignarCount > 0 && (
+            <div className="rutero-warning-banner">
+              ⚠ {resumen.sinAsignarCount} sitio{resumen.sinAsignarCount === 1 ? '' : 's'} sin ruta asignada · {resumen.sinAsignarUnidades.toLocaleString('es-CO')} unidades sin conductor. Asígnalos en Data Maestra → Rutas antes de imprimir el rutero.
+            </div>
+          )}
+
           <div className="section-label">Resumen</div>
           <div className="rem-stats-row">
             <div className="rem-stat-card">
@@ -188,7 +206,7 @@ export default function RuteroPage() {
           <div className="section-label">Conductores</div>
           {loadingDia ? (
             <div className="empty-state"><p>Cargando información del día...</p></div>
-          ) : conductores.length === 0 ? (
+          ) : conductores.length === 0 && resumen.sinAsignarCount === 0 ? (
             <div className="empty-state"><p>No hay conductores con entregas para esta fecha.</p></div>
           ) : (
             <div className="data-table-wrap">
@@ -212,6 +230,25 @@ export default function RuteroPage() {
                       <td style={{ textAlign: 'center', fontWeight: 700 }}>{c.totales.totalCanastas}</td>
                     </tr>
                   ))}
+                  {resumen.sinAsignarCount > 0 && (
+                    <>
+                      <tr
+                        className="row-sin-asignar"
+                        onClick={() => setSinAsignarOpen(o => !o)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td colSpan={2}>{sinAsignarOpen ? '▾' : '▸'} ⚠ SIN ASIGNAR</td>
+                        <td style={{ textAlign: 'center' }}>{resumen.sinAsignarCount}</td>
+                        <td style={{ textAlign: 'center' }}>{resumen.sinAsignarUnidades.toLocaleString('es-CO')}</td>
+                        <td style={{ textAlign: 'center' }}>-</td>
+                      </tr>
+                      {sinAsignarOpen && sinAsignar.map(s => (
+                        <tr key={s.idSitio} className="row-sin-asignar-detail">
+                          <td colSpan={5}>{s.idSitio} — {s.nombreInstitucion}</td>
+                        </tr>
+                      ))}
+                    </>
+                  )}
                 </tbody>
               </table>
             </div>
