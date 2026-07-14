@@ -1381,22 +1381,6 @@ a {
   line-height: 1.5;
 }
 
-.rutas-table td.rt-num-cell {
-  white-space: nowrap;
-  word-break: keep-all;
-}
-
-.rt-subtotal-row td {
-  background: #f5f5f5;
-  font-weight: 700;
-}
-
-.rt-total-row td {
-  background: #E0E7FF;
-  font-weight: 800;
-  color: #1e1b4b;
-}
-
 /* ── Envío del Día ── */
 .envio-bloque {
   max-width: 900px;

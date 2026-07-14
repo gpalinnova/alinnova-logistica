@@ -117,25 +117,18 @@ export default function RutaDelDia({ fecha, onStatus }) {
             <col />
             <col />
             <col />
-            <col />
-            <col />
           </colgroup>
           <thead>
             <tr>
-              <th rowSpan={2}>CONDUCTOR</th>
-              <th rowSpan={2}>PLACA</th>
-              <th rowSpan={2}>CARGUE ALINNOVA</th>
-              <th rowSpan={2}>Id Sitio Entrega</th>
-              <th rowSpan={2}>Nombre y/o Descripción Sitio de Entrega</th>
-              <th rowSpan={2}>HORARIO SUGERIDO COMPENSAR</th>
-              <th rowSpan={2}>HORARIO ENTREGA ALINNOVA</th>
-              <th rowSpan={2}>ORDEN ENTREGA</th>
-              <th colSpan={2}>TOTAL ENTREGA</th>
-              <th rowSpan={2}>Dirección de Entrega</th>
-            </tr>
-            <tr>
-              <th>TIPO 1</th>
-              <th>TIPO 2</th>
+              <th>CONDUCTOR</th>
+              <th>PLACA</th>
+              <th>CARGUE ALINNOVA</th>
+              <th>Id Sitio Entrega</th>
+              <th>Nombre y/o Descripción Sitio de Entrega</th>
+              <th>HORARIO SUGERIDO COMPENSAR</th>
+              <th>HORARIO ENTREGA ALINNOVA</th>
+              <th>ORDEN ENTREGA</th>
+              <th>Dirección de Entrega</th>
             </tr>
           </thead>
           <tbody>
@@ -158,25 +151,11 @@ export default function RutaDelDia({ fecha, onStatus }) {
                     <td>{f.horarioSugerido}</td>
                     <td>{f.horarioEntregaAlinnova}</td>
                     <td>{f.orden}{f.sinBase ? ' ⚠️' : ''}</td>
-                    <td className="rt-num-cell">{f.sinBase ? '—' : f.tipo1}</td>
-                    <td className="rt-num-cell">{f.sinBase ? '—' : f.tipo2}</td>
                     <td>{f.direccion}</td>
                   </tr>
                 ))}
-                <tr className="rt-subtotal-row">
-                  <td colSpan={8}>SUBTOTAL - {c.conductor}</td>
-                  <td className="rt-num-cell">{c.subtotalTipo1}</td>
-                  <td className="rt-num-cell">{c.subtotalTipo2}</td>
-                  <td></td>
-                </tr>
               </Fragment>
             ))}
-            <tr className="rt-total-row">
-              <td colSpan={8}>TOTAL GENERAL</td>
-              <td className="rt-num-cell">{tableData.totalTipo1}</td>
-              <td className="rt-num-cell">{tableData.totalTipo2}</td>
-              <td></td>
-            </tr>
           </tbody>
         </table>
       </div>
