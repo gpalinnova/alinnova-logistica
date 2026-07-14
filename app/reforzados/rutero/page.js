@@ -18,6 +18,7 @@ export default function RuteroPage() {
   const [rutaActiva, setRutaActiva] = useState(null)
   const [baseRows, setBaseRows] = useState([])
   const [cicloDia, setCicloDia] = useState(null)
+  const [overridesEmbalaje, setOverridesEmbalaje] = useState([])
   const [errorMsg, setErrorMsg] = useState('')
   const [generando, setGenerando] = useState(false)
   const [toast, setToast] = useState(null)
@@ -54,7 +55,7 @@ export default function RuteroPage() {
     let active = true
     async function fetchDia() {
       setLoadingDia(true)
-      const [{ data: base, error: baseError }, { data: ciclo }] = await Promise.all([
+      const [{ data: base, error: baseError }, { data: ciclo }, { data: overrides }] = await Promise.all([
         supabase.from('reforzados_base_suministro').select('*').eq('fecha', selectedDate),
         supabase
           .from('reforzados_ciclo_dias')
@@ -62,10 +63,12 @@ export default function RuteroPage() {
           .eq('fecha', selectedDate)
           .eq('ciclo.estado', 'activo')
           .maybeSingle(),
+        supabase.from('reforzados_override_embalaje_dia').select('*').eq('fecha', selectedDate),
       ])
       if (!active) return
       setBaseRows(base || [])
       setCicloDia(ciclo || null)
+      setOverridesEmbalaje(overrides || [])
       setErrorMsg(baseError ? 'No se pudo cargar la base de suministro.' : (!base || base.length === 0 ? 'No hay base de suministro cargada para esta fecha.' : ''))
       setLoadingDia(false)
     }
@@ -75,7 +78,14 @@ export default function RuteroPage() {
 
   const sitiosById = useMemo(() => new Map(sitiosMaestro.map(s => [s.id_sitio_entrega, s])), [sitiosMaestro])
   const baseByIdSitio = useMemo(() => new Map(baseRows.map(b => [b.id_sitio_entrega, b])), [baseRows])
-  const menuDelDia = useMemo(() => buildMenuDelDia(cicloDia, productos), [cicloDia, productos])
+  const overridesByProductoId = useMemo(
+    () => new Map(overridesEmbalaje.map(o => [o.embalaje_ref, o.unidades_por_canastilla])),
+    [overridesEmbalaje]
+  )
+  const menuDelDia = useMemo(
+    () => buildMenuDelDia(cicloDia, productos, overridesByProductoId),
+    [cicloDia, productos, overridesByProductoId]
+  )
   const conductores = useMemo(
     () => buildRuteroConductores(asignaciones, sitiosById, baseByIdSitio, menuDelDia),
     [asignaciones, sitiosById, baseByIdSitio, menuDelDia]
