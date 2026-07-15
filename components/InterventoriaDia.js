@@ -20,7 +20,7 @@ export default function InterventoriaDia({ fecha }) {
       const [{ data: sitiosData, error: sitiosError }, { data: rutaData, error: rutaError }, { data: baseData, error: baseError }] = await Promise.all([
         supabase.from('reforzados_sitios').select('*'),
         supabase.from('reforzados_rutas_mes').select('*').eq('estado', 'activo').maybeSingle(),
-        supabase.from('reforzados_base_suministro').select('*').eq('fecha', fecha),
+        supabase.from('reforzados_base_suministro').select('*').eq('fecha', fecha).gt('total', 0),
       ])
       if (!active) return
       setErrorMsg(sitiosError || rutaError || baseError ? 'No se pudo cargar la información de interventoría.' : '')

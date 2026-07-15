@@ -56,7 +56,7 @@ export default function RuteroPage() {
     async function fetchDia() {
       setLoadingDia(true)
       const [{ data: base, error: baseError }, { data: ciclo }, { data: overrides }] = await Promise.all([
-        supabase.from('reforzados_base_suministro').select('*').eq('fecha', selectedDate),
+        supabase.from('reforzados_base_suministro').select('*').eq('fecha', selectedDate).gt('total', 0),
         supabase
           .from('reforzados_ciclo_dias')
           .select('*, ciclo:reforzados_ciclos!inner(estado)')

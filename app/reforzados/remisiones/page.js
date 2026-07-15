@@ -10,7 +10,7 @@ import { generateRemisionesPDF, fmtFechaCorta } from '../../../lib/remisionesPdf
 function buildSitiosARemisionar(baseRows, sitiosById) {
   const list = baseRows.map(b => {
     const s = sitiosById.get(b.id_sitio_entrega) || {}
-    const total = (b.tipo_a || 0) + (b.tipo_b || 0) + (b.tipo_c || 0) + (b.tipo_d || 0) + (b.muestra_tipo_1 || 0) + (b.muestra_tipo_2 || 0)
+    const total = b.total || 0
     return {
       id_sitio_entrega: b.id_sitio_entrega,
       nombre_institucion: s.nombre_institucion || `Sitio ${b.id_sitio_entrega} (sin datos maestro)`,
@@ -74,7 +74,7 @@ export default function RemisionesPage() {
     let active = true
     async function fetchBase() {
       setLoadingBase(true)
-      const { data, error } = await supabase.from('reforzados_base_suministro').select('*').eq('fecha', selectedDate)
+      const { data, error } = await supabase.from('reforzados_base_suministro').select('*').eq('fecha', selectedDate).gt('total', 0)
       if (!active) return
       setBaseRows(data || [])
       setErrorMsg(error ? 'No se pudo cargar la base de suministro.' : (!data || data.length === 0 ? 'No hay base de suministro cargada para esta fecha.' : ''))

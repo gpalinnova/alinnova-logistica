@@ -90,7 +90,7 @@ export default function BaseSuministroPage() {
 
   async function fetchBases() {
     setLoading(true)
-    const { data, error } = await supabase.from('reforzados_base_suministro').select('*').order('fecha', { ascending: false })
+    const { data, error } = await supabase.from('reforzados_base_suministro').select('*').gt('total', 0).order('fecha', { ascending: false })
     if (error) {
       setErrorMsg('No se pudieron cargar las bases de suministro.')
     } else {
@@ -235,6 +235,7 @@ export default function BaseSuministroPage() {
       .from('reforzados_base_suministro')
       .select('*')
       .eq('fecha', fecha)
+      .gt('total', 0)
       .order('id_sitio_entrega')
     if (!error) setDetalleFilas(data || [])
     setDetalleLoading(false)
