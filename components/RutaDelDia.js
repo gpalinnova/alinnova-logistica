@@ -117,6 +117,7 @@ export default function RutaDelDia({ fecha, onStatus }) {
             <col />
             <col />
             <col />
+            <col />
           </colgroup>
           <thead>
             <tr>
@@ -125,6 +126,7 @@ export default function RutaDelDia({ fecha, onStatus }) {
               <th>CARGUE ALINNOVA</th>
               <th>Id Sitio Entrega</th>
               <th>Nombre y/o Descripción Sitio de Entrega</th>
+              <th>Sede Educativa</th>
               <th>HORARIO SUGERIDO COMPENSAR</th>
               <th>HORARIO ENTREGA ALINNOVA</th>
               <th>ORDEN ENTREGA</th>
@@ -148,6 +150,7 @@ export default function RutaDelDia({ fecha, onStatus }) {
                     )}
                     <td>{f.idSitio}</td>
                     <td>{f.nombreDescripcion}</td>
+                    <td>{f.sedeEducativa}</td>
                     <td>{f.horarioSugerido}</td>
                     <td>{f.horarioEntregaAlinnova}</td>
                     <td>{f.orden}{f.sinBase ? ' ⚠️' : ''}</td>
