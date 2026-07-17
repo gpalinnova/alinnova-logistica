@@ -1322,6 +1322,11 @@ a {
   line-height: 1.6;
 }
 
+.interv-block-suministro {
+  font-weight: 700;
+  color: #3D1F3D;
+}
+
 .interv-actions {
   margin-top: 20px;
   margin-bottom: 0;
@@ -1938,6 +1943,30 @@ a {
   font-weight: 600;
   color: #374151;
   flex: 1 1 auto;
+}
+
+.embalaje-editor-label-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  color: #374151;
+}
+
+.embalaje-editor-label-input:hover {
+  border-color: #d1d5db;
+  background: #fff;
+}
+
+.embalaje-editor-label-input:focus {
+  outline: none;
+  border-color: #3D1F3D;
+  background: #fff;
 }
 
 .embalaje-editor-controls {

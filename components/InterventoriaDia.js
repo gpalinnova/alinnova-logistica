@@ -94,6 +94,11 @@ export default function InterventoriaDia({ fecha }) {
           <div className="interv-block-detail">CONDUCTOR: {b.conductor}</div>
           <div className="interv-block-detail">AUXILIAR: {b.auxiliar}</div>
           <div className="interv-block-detail">VEHICULO: {b.placa}</div>
+          {b.suministrosAdicionales?.map((s, i) => (
+            <div key={i} className="interv-block-detail interv-block-suministro">
+              HACER ENTREGA DE {s.cantidad} SUMINISTRO{s.cantidad === 1 ? '' : 'S'} PARA INTERVENTORIA
+            </div>
+          ))}
         </div>
       ))}
     </div>

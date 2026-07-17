@@ -52,20 +52,46 @@ export default function MenuDelDia({ fecha, onStatus }) {
     [overrides]
   )
 
+  const labelOverridesByProductoId = useMemo(() => {
+    const m = new Map()
+    for (const o of overrides) {
+      if (o.label_custom) m.set(o.embalaje_ref, o.label_custom)
+    }
+    return m
+  }, [overrides])
+
   const filas = useMemo(() => {
     if (!cicloDia || cicloDia.festivo) return []
     return buildFilasTabla(cicloDia, productos, overridesByProductoId)
   }, [cicloDia, productos, overridesByProductoId])
 
   const handleOverrideSaved = useCallback((productoId, unidades) => {
-    setOverrides(prev => [
-      ...prev.filter(o => o.embalaje_ref !== productoId),
-      { embalaje_ref: productoId, unidades_por_canastilla: unidades },
-    ])
+    setOverrides(prev => {
+      const existing = prev.find(o => o.embalaje_ref === productoId)
+      const next = { ...existing, embalaje_ref: productoId, unidades_por_canastilla: unidades }
+      return [...prev.filter(o => o.embalaje_ref !== productoId), next]
+    })
   }, [])
 
   const handleOverrideRestored = useCallback((productoId) => {
     setOverrides(prev => prev.filter(o => o.embalaje_ref !== productoId))
+  }, [])
+
+  const handleLabelSaved = useCallback((productoId, labelCustom) => {
+    setOverrides(prev => {
+      const existing = prev.find(o => o.embalaje_ref === productoId)
+      const next = { ...existing, embalaje_ref: productoId, label_custom: labelCustom }
+      return [...prev.filter(o => o.embalaje_ref !== productoId), next]
+    })
+  }, [])
+
+  const handleLabelRestored = useCallback((productoId) => {
+    setOverrides(prev => {
+      const existing = prev.find(o => o.embalaje_ref === productoId)
+      if (!existing) return prev
+      const { label_custom, ...rest } = existing
+      return [...prev.filter(o => o.embalaje_ref !== productoId), rest]
+    })
   }, [])
 
   useEffect(() => {
@@ -122,8 +148,11 @@ export default function MenuDelDia({ fecha, onStatus }) {
         <EmbalajeDiaEditor
           fecha={fecha}
           filas={filas}
+          labelOverridesByProductoId={labelOverridesByProductoId}
           onOverrideSaved={handleOverrideSaved}
           onOverrideRestored={handleOverrideRestored}
+          onLabelSaved={handleLabelSaved}
+          onLabelRestored={handleLabelRestored}
         />
       </div>
     </div>

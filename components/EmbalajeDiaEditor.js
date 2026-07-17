@@ -11,15 +11,17 @@ const COMPONENTE_LABELS = {
   FRUTA: 'Fruta',
 }
 
-function buildRows(filas) {
+function buildRows(filas, labelOverridesByProductoId) {
   const rows = []
   for (const fila of filas) {
     if (!fila.lineas || fila.lineas.length === 0) continue
     const componenteLabel = COMPONENTE_LABELS[fila.key] || fila.label
     for (const linea of fila.lineas) {
+      const labelDefault = linea.subLabel ? `${componenteLabel} — ${linea.subLabel}` : componenteLabel
       rows.push({
         productoId: linea.productoId,
-        label: linea.subLabel ? `${componenteLabel} — ${linea.subLabel}` : componenteLabel,
+        labelDefault,
+        labelCustom: labelOverridesByProductoId?.get(linea.productoId) || null,
         unidadesOriginal: linea.unidadesOriginal,
         unidadesActual: linea.unidadesActual,
         hasOverride: linea.hasOverride,
@@ -29,14 +31,20 @@ function buildRows(filas) {
   return rows
 }
 
-function EmbalajeRow({ fecha, row, onSaved, onRestored }) {
-  const { productoId, label, unidadesOriginal } = row
+function EmbalajeRow({ fecha, row, onSaved, onRestored, onLabelSaved, onLabelRestored }) {
+  const { productoId, labelDefault, unidadesOriginal } = row
   const [value, setValue] = useState(String(row.unidadesActual))
   const [hasOverride, setHasOverride] = useState(row.hasOverride)
   const [status, setStatus] = useState('idle')
+  const [labelValue, setLabelValue] = useState(row.labelCustom || labelDefault)
+  const [labelStatus, setLabelStatus] = useState('idle')
 
   const numValue = Number(value)
   const isDirty = Number.isInteger(numValue) && numValue !== unidadesOriginal
+
+  function currentQtyForUpsert() {
+    return Number.isInteger(numValue) && numValue > 0 ? numValue : unidadesOriginal
+  }
 
   async function handleSave() {
     if (!Number.isInteger(numValue) || numValue <= 0) {
@@ -92,11 +100,56 @@ function EmbalajeRow({ fecha, row, onSaved, onRestored }) {
     if (e.key === 'Enter') e.currentTarget.blur()
   }
 
+  // Nota descriptiva editable de la fila (ej. "canastilla por 210 unidades en
+  // bolsa de 10"). No afecta el cálculo de embalaje ni el rutero: solo se
+  // guarda label_custom en reforzados_override_embalaje_dia. unidades_por_canastilla
+  // se re-envía sin cambios porque la columna es NOT NULL en la tabla.
+  async function handleLabelSave() {
+    const trimmed = labelValue.trim()
+    const toSave = trimmed && trimmed !== labelDefault ? trimmed : null
+    setLabelStatus('saving')
+    const { error } = await supabase.from('reforzados_override_embalaje_dia').upsert(
+      {
+        fecha,
+        embalaje_ref: productoId,
+        unidades_por_canastilla: currentQtyForUpsert(),
+        unidades_original: unidadesOriginal,
+        label_custom: toSave,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'fecha,embalaje_ref' }
+    )
+    if (error) {
+      setLabelStatus('error')
+      return
+    }
+    setLabelValue(toSave || labelDefault)
+    if (toSave) setHasOverride(true)
+    setLabelStatus('idle')
+    if (toSave) onLabelSaved?.(productoId, toSave)
+    else onLabelRestored?.(productoId)
+  }
+
+  function handleLabelKeyDown(e) {
+    if (e.key === 'Enter') e.currentTarget.blur()
+  }
+
   const statusLabel = { saving: 'guardando…', saved: 'guardado', error: 'error' }[status]
+  const labelStatusLabel = { saving: 'guardando…', error: 'error' }[labelStatus]
 
   return (
     <div className="embalaje-editor-row">
-      <div className="embalaje-editor-label">{label}</div>
+      <input
+        type="text"
+        className="embalaje-editor-label-input"
+        value={labelValue}
+        onChange={e => setLabelValue(e.target.value)}
+        onBlur={handleLabelSave}
+        onKeyDown={handleLabelKeyDown}
+      />
+      {labelStatusLabel && (
+        <span className={`embalaje-editor-status embalaje-editor-status-${labelStatus}`}>{labelStatusLabel}</span>
+      )}
       <div className="embalaje-editor-controls">
         <input
           type="number"
@@ -120,8 +173,16 @@ function EmbalajeRow({ fecha, row, onSaved, onRestored }) {
   )
 }
 
-export default function EmbalajeDiaEditor({ fecha, filas, onOverrideSaved, onOverrideRestored }) {
-  const rows = buildRows(filas)
+export default function EmbalajeDiaEditor({
+  fecha,
+  filas,
+  labelOverridesByProductoId,
+  onOverrideSaved,
+  onOverrideRestored,
+  onLabelSaved,
+  onLabelRestored,
+}) {
+  const rows = buildRows(filas, labelOverridesByProductoId)
 
   return (
     <div className="embalaje-editor">
@@ -137,6 +198,8 @@ export default function EmbalajeDiaEditor({ fecha, filas, onOverrideSaved, onOve
             row={row}
             onSaved={onOverrideSaved}
             onRestored={onOverrideRestored}
+            onLabelSaved={onLabelSaved}
+            onLabelRestored={onLabelRestored}
           />
         ))
       )}
