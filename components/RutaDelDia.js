@@ -4,11 +4,53 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { buildTituloTabla, buildRutasData } from '../lib/tablaRutasUtils'
 
+function OrdenEntregaInput({ fecha, idSitio, ordenInicial }) {
+  const [value, setValue] = useState(String(ordenInicial))
+
+  useEffect(() => {
+    setValue(String(ordenInicial))
+  }, [fecha, idSitio, ordenInicial])
+
+  async function handleSave() {
+    const numValue = value === '' ? 0 : Number(value)
+    if (!Number.isInteger(numValue)) {
+      setValue(String(ordenInicial))
+      return
+    }
+    if (numValue === ordenInicial) return
+    await supabase.from('reforzados_override_orden_entrega').upsert(
+      {
+        fecha,
+        id_sitio_entrega: idSitio,
+        orden_entrega: numValue,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'fecha,id_sitio_entrega' }
+    )
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') e.currentTarget.blur()
+  }
+
+  return (
+    <input
+      type="number"
+      className="table-input rt-orden-input"
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={handleSave}
+      onKeyDown={handleKeyDown}
+    />
+  )
+}
+
 export default function RutaDelDia({ fecha, onStatus }) {
   const [sitios, setSitios] = useState([])
   const [rutaActiva, setRutaActiva] = useState(null)
   const [asignaciones, setAsignaciones] = useState([])
   const [baseRows, setBaseRows] = useState([])
+  const [ordenOverrides, setOrdenOverrides] = useState([])
   const [loadingInicial, setLoadingInicial] = useState(true)
   const [asigLoading, setAsigLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -17,16 +59,23 @@ export default function RutaDelDia({ fecha, onStatus }) {
     let active = true
     async function fetchData() {
       setLoadingInicial(true)
-      const [{ data: sitiosData, error: sitiosError }, { data: rutaData, error: rutaError }, { data: baseData, error: baseError }] = await Promise.all([
+      const [
+        { data: sitiosData, error: sitiosError },
+        { data: rutaData, error: rutaError },
+        { data: baseData, error: baseError },
+        { data: ordenData, error: ordenError },
+      ] = await Promise.all([
         supabase.from('reforzados_sitios').select('*'),
         supabase.from('reforzados_rutas_mes').select('*').eq('estado', 'activo').maybeSingle(),
         supabase.from('reforzados_base_suministro').select('*').eq('fecha', fecha),
+        supabase.from('reforzados_override_orden_entrega').select('*').eq('fecha', fecha),
       ])
       if (!active) return
-      setErrorMsg(sitiosError || rutaError || baseError ? 'No se pudo cargar la información de la ruta.' : '')
+      setErrorMsg(sitiosError || rutaError || baseError || ordenError ? 'No se pudo cargar la información de la ruta.' : '')
       setSitios(sitiosData || [])
       setRutaActiva(rutaData || null)
       setBaseRows(baseData || [])
+      setOrdenOverrides(ordenData || [])
       setLoadingInicial(false)
     }
     fetchData()
@@ -63,12 +112,16 @@ export default function RutaDelDia({ fecha, onStatus }) {
   }, [rutaActiva, fecha])
 
   const sitiosById = useMemo(() => new Map(sitios.map(s => [s.id_sitio_entrega, s])), [sitios])
+  const ordenOverridesByIdSitio = useMemo(
+    () => new Map(ordenOverrides.map(o => [o.id_sitio_entrega, o.orden_entrega])),
+    [ordenOverrides]
+  )
 
   const tableData = useMemo(() => {
     if (!rutaAplica || asignaciones.length === 0) return null
     const baseByIdSitio = new Map(baseRows.map(b => [b.id_sitio_entrega, b]))
-    return buildRutasData(asignaciones, sitiosById, baseByIdSitio)
-  }, [rutaAplica, asignaciones, sitiosById, baseRows])
+    return buildRutasData(asignaciones, sitiosById, baseByIdSitio, ordenOverridesByIdSitio)
+  }, [rutaAplica, asignaciones, sitiosById, baseRows, ordenOverridesByIdSitio])
 
   const loading = loadingInicial || asigLoading
 
@@ -153,7 +206,10 @@ export default function RutaDelDia({ fecha, onStatus }) {
                     <td>{f.sitioEntrega}</td>
                     <td>{f.horarioSugerido}</td>
                     <td>{f.horarioEntregaAlinnova}</td>
-                    <td>{f.orden}{f.sinBase ? ' ⚠️' : ''}</td>
+                    <td>
+                      <OrdenEntregaInput fecha={fecha} idSitio={f.idSitio} ordenInicial={f.orden} />
+                      {f.sinBase ? ' ⚠️' : ''}
+                    </td>
                     <td>{f.direccion}</td>
                   </tr>
                 ))}

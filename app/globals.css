@@ -1398,6 +1398,14 @@ a {
   line-height: 1.5;
 }
 
+.rt-orden-input {
+  width: 48px;
+  min-width: 48px;
+  padding: 2px 4px;
+  font-size: 11px;
+  text-align: center;
+}
+
 /* ── Envío del Día ── */
 .envio-bloque {
   max-width: 900px;
