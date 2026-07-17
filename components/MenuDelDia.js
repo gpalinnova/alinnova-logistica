@@ -60,6 +60,14 @@ export default function MenuDelDia({ fecha, onStatus }) {
     return m
   }, [overrides])
 
+  const notasByProductoId = useMemo(() => {
+    const m = new Map()
+    for (const o of overrides) {
+      if (o.embalaje_nota) m.set(o.embalaje_ref, o.embalaje_nota)
+    }
+    return m
+  }, [overrides])
+
   const filas = useMemo(() => {
     if (!cicloDia || cicloDia.festivo) return []
     return buildFilasTabla(cicloDia, productos, overridesByProductoId)
@@ -90,6 +98,23 @@ export default function MenuDelDia({ fecha, onStatus }) {
       const existing = prev.find(o => o.embalaje_ref === productoId)
       if (!existing) return prev
       const { label_custom, ...rest } = existing
+      return [...prev.filter(o => o.embalaje_ref !== productoId), rest]
+    })
+  }, [])
+
+  const handleNotaSaved = useCallback((productoId, embalajeNota) => {
+    setOverrides(prev => {
+      const existing = prev.find(o => o.embalaje_ref === productoId)
+      const next = { ...existing, embalaje_ref: productoId, embalaje_nota: embalajeNota }
+      return [...prev.filter(o => o.embalaje_ref !== productoId), next]
+    })
+  }, [])
+
+  const handleNotaRestored = useCallback((productoId) => {
+    setOverrides(prev => {
+      const existing = prev.find(o => o.embalaje_ref === productoId)
+      if (!existing) return prev
+      const { embalaje_nota, ...rest } = existing
       return [...prev.filter(o => o.embalaje_ref !== productoId), rest]
     })
   }, [])
@@ -137,6 +162,14 @@ export default function MenuDelDia({ fecha, onStatus }) {
                     {fila.empaqueLines.map((line, i) => (
                       <div key={i}>{line}</div>
                     ))}
+                    {fila.lineas
+                      .filter(linea => notasByProductoId.get(linea.productoId))
+                      .map(linea => (
+                        <div key={`nota-${linea.productoId}`} className="wt-nota">
+                          {fila.lineas.length > 1 && linea.subLabel ? `${linea.subLabel}: ` : ''}
+                          {notasByProductoId.get(linea.productoId)}
+                        </div>
+                      ))}
                   </td>
                 </tr>
               ))}
@@ -149,10 +182,13 @@ export default function MenuDelDia({ fecha, onStatus }) {
           fecha={fecha}
           filas={filas}
           labelOverridesByProductoId={labelOverridesByProductoId}
+          notasByProductoId={notasByProductoId}
           onOverrideSaved={handleOverrideSaved}
           onOverrideRestored={handleOverrideRestored}
           onLabelSaved={handleLabelSaved}
           onLabelRestored={handleLabelRestored}
+          onNotaSaved={handleNotaSaved}
+          onNotaRestored={handleNotaRestored}
         />
       </div>
     </div>

@@ -1,3 +1,7 @@
+:root {
+  --accent2: #1565C0;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   padding: 0;
@@ -1224,6 +1228,14 @@ a {
   font-weight: 500;
 }
 
+.whatsapp-table .wt-nota {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-top: 2px;
+}
+
 /* ── Acciones Tabla WhatsApp ── */
 .tw-actions {
   display: flex;
@@ -1925,17 +1937,20 @@ a {
   margin: 0 0 16px;
 }
 
-.embalaje-editor-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+.embalaje-editor-item {
   padding: 10px 0;
   border-top: 1px solid #f1f0f3;
 }
 
-.embalaje-editor-row:first-of-type {
+.embalaje-editor-item:first-of-type {
   border-top: none;
+}
+
+.embalaje-editor-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .embalaje-editor-label {
@@ -2022,3 +2037,71 @@ a {
 .embalaje-editor-status-saving { color: #6b7280; }
 .embalaje-editor-status-saved { color: #15803d; }
 .embalaje-editor-status-error { color: #b91c1c; }
+
+.embalaje-editor-nota-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.embalaje-editor-nota-btn {
+  background: none;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.embalaje-editor-nota-btn:hover {
+  background: #f3f4f6;
+  color: var(--accent2);
+  border-color: var(--accent2);
+}
+
+.embalaje-editor-nota-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  color: #1a1a2e;
+  background: #fff;
+}
+
+.embalaje-editor-nota-input:focus {
+  outline: none;
+  border-color: var(--accent2);
+}
+
+.embalaje-editor-nota-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.embalaje-editor-nota-save,
+.embalaje-editor-nota-cancel,
+.embalaje-editor-nota-delete {
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.embalaje-editor-nota-save { background: #3D1F3D; color: #fff; }
+.embalaje-editor-nota-save:hover { background: #2a1530; }
+
+.embalaje-editor-nota-cancel { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
+.embalaje-editor-nota-cancel:hover { background: #e5e7eb; }
+
+.embalaje-editor-nota-delete { background: #fff; color: #b91c1c; border-color: #fca5a5; }
+.embalaje-editor-nota-delete:hover { background: #fef2f2; }
