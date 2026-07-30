@@ -7,15 +7,16 @@ import Toast from '../../../components/Toast'
 import RutaPreviewModal from '../../../components/RutaPreviewModal'
 import RutaDetalleModal from '../../../components/RutaDetalleModal'
 import RutaEditModal from '../../../components/RutaEditModal'
+import MesAnioModal from '../../../components/MesAnioModal'
 import { supabase } from '../../../lib/supabase'
-import { parseRutasExcel, parseRutasPaste, readFileAsArrayBuffer, detectMesAnioFromFilename, normalizeHorario } from '../../../lib/parseRutasExcel'
+import { parseRutasExcel, parseRutasPaste, readFileAsArrayBuffer, normalizeHorario, nombreMes } from '../../../lib/parseRutasExcel'
 import { descargarPlantillaRutas } from '../../../lib/rutasTemplate'
 
 function sortRutas(list) {
   return [...list].sort((a, b) => {
-    if (a.estado !== b.estado) return a.estado === 'activo' ? -1 : 1
     if (a.año !== b.año) return b.año - a.año
-    return b.mes - a.mes
+    if (a.mes !== b.mes) return b.mes - a.mes
+    return b.version - a.version
   })
 }
 
@@ -40,6 +41,8 @@ export default function RutasPage() {
   const [editandoLoading, setEditandoLoading] = useState(false)
   const [editandoSaving, setEditandoSaving] = useState(false)
   const [editandoError, setEditandoError] = useState('')
+  const [mesAnioModal, setMesAnioModal] = useState(null)
+  const [mesAnioSeleccionado, setMesAnioSeleccionado] = useState(null)
   const fileInputRef = useRef(null)
 
   useEffect(() => { fetchSitios(); fetchRutas() }, [])
@@ -49,6 +52,15 @@ export default function RutasPage() {
     for (const s of sitios) map.set(s.id_sitio_entrega, s)
     return map
   }, [sitios])
+
+  const countVersionesByMesAño = useMemo(() => {
+    const map = new Map()
+    for (const r of rutas) {
+      const key = `${r.mes}-${r.año}`
+      map.set(key, (map.get(key) || 0) + 1)
+    }
+    return map
+  }, [rutas])
 
   async function fetchSitios() {
     const { data, error } = await supabase.from('reforzados_sitios').select('id_sitio_entrega, nombre_institucion, direccion, localidad, activo')
@@ -85,21 +97,42 @@ export default function RutasPage() {
   }
 
   function handlePickFile() {
-    fileInputRef.current?.click()
+    setMesAnioModal({ purpose: 'file' })
+  }
+
+  function handleTextareaPaste(e) {
+    const text = e.clipboardData?.getData('text') || ''
+    if (!text.trim()) return
+    e.preventDefault()
+    setMesAnioModal({ purpose: 'paste', pendingPasteText: text })
+  }
+
+  function handleMesAnioContinuar({ mes, año }) {
+    const { purpose, pendingPasteText } = mesAnioModal || {}
+    setMesAnioSeleccionado({ mes, año })
+    setMesAnioModal(null)
+    if (purpose === 'file') {
+      fileInputRef.current?.click()
+    } else if (purpose === 'paste') {
+      setPasteText(pendingPasteText || '')
+    }
+  }
+
+  function handleMesAnioCancelar() {
+    setMesAnioModal(null)
   }
 
   async function handleFileChange(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
+    if (!file || !mesAnioSeleccionado) return
 
     setUploading(true)
     setErrorMsg('')
     try {
       const buffer = await readFileAsArrayBuffer(file)
       const data = parseRutasExcel(buffer)
-      const mesDetectado = detectMesAnioFromFilename(file.name)
-      setPreview({ data, archivoNombre: file.name, mesDetectado })
+      setPreview({ data, archivoNombre: file.name, mes: mesAnioSeleccionado.mes, año: mesAnioSeleccionado.año })
     } catch (err) {
       setErrorMsg(err.message || 'No se pudo leer el archivo Excel.')
     } finally {
@@ -108,11 +141,12 @@ export default function RutasPage() {
   }
 
   function handleAnalizarPaste() {
+    if (!mesAnioSeleccionado) return
     setAnalizandoPaste(true)
     setErrorMsg('')
     try {
       const data = parseRutasPaste(pasteText)
-      setPreview({ data, archivoNombre: 'Pegado desde portapapeles', mesDetectado: null })
+      setPreview({ data, archivoNombre: 'Pegado desde portapapeles', mes: mesAnioSeleccionado.mes, año: mesAnioSeleccionado.año })
       setPasteText('')
     } catch (err) {
       setErrorMsg(err.message || 'No se pudo analizar el texto pegado.')
@@ -126,18 +160,31 @@ export default function RutasPage() {
     setPreview(null)
   }
 
-  async function handleConfirmUpload({ mes, año, nombreMes, existingRuta }) {
+  async function handleConfirmUpload({ mes, año }) {
     if (!preview) return
     setSaving(true)
     try {
       const { data, archivoNombre } = preview
-      let estado = 'espera'
+      const nombreMesActual = nombreMes(mes, año)
 
-      if (existingRuta) {
-        estado = existingRuta.estado
-        const { error: deleteError } = await supabase.from('reforzados_rutas_mes').delete().eq('id', existingRuta.id)
-        if (deleteError) throw deleteError
-      }
+      const { data: maxRow, error: maxError } = await supabase
+        .from('reforzados_rutas_mes')
+        .select('version')
+        .eq('mes', mes)
+        .eq('año', año)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (maxError) throw maxError
+      const nuevaVersion = (maxRow?.version || 0) + 1
+
+      const { error: deactivateError } = await supabase
+        .from('reforzados_rutas_mes')
+        .update({ estado: 'espera' })
+        .eq('mes', mes)
+        .eq('año', año)
+        .eq('estado', 'activo')
+      if (deactivateError) throw deactivateError
 
       const repartidoresPayload = data.repartidores.map(r => ({ conductor: r.conductor, auxiliar: r.auxiliar, placa: r.placa }))
       const { data: upserted, error: repartidoresError } = await supabase
@@ -151,7 +198,7 @@ export default function RutasPage() {
 
       const { data: rutaInsertada, error: rutaError } = await supabase
         .from('reforzados_rutas_mes')
-        .insert([{ mes, año, nombre_mes: nombreMes, estado, archivo_nombre: archivoNombre }])
+        .insert([{ mes, año, version: nuevaVersion, nombre_mes: nombreMesActual, estado: 'activo', archivo_nombre: archivoNombre }])
         .select()
         .single()
       if (rutaError) throw rutaError
@@ -177,7 +224,8 @@ export default function RutasPage() {
 
       await fetchRutas()
       setPreview(null)
-      setToast({ message: `Ruta de ${nombreMes} guardada: ${data.repartidores.length} repartidores, ${asignacionesRows.length} asignaciones.`, type: 'success' })
+      setMesAnioSeleccionado(null)
+      setToast({ message: `Ruta de ${nombreMesActual} guardada como versión ${nuevaVersion}: ${data.repartidores.length} repartidores, ${asignacionesRows.length} asignaciones.`, type: 'success' })
     } catch (err) {
       setErrorMsg('No se pudo guardar la ruta.')
     } finally {
@@ -203,7 +251,12 @@ export default function RutasPage() {
     setConfirmLoading(true)
     try {
       if (type === 'activar') {
-        const { error: e1 } = await supabase.from('reforzados_rutas_mes').update({ estado: 'espera' }).eq('estado', 'activo')
+        const { error: e1 } = await supabase
+          .from('reforzados_rutas_mes')
+          .update({ estado: 'espera' })
+          .eq('mes', ruta.mes)
+          .eq('año', ruta.año)
+          .eq('estado', 'activo')
         if (e1) throw e1
         const { error: e2 } = await supabase.from('reforzados_rutas_mes').update({ estado: 'activo' }).eq('id', ruta.id)
         if (e2) throw e2
@@ -365,6 +418,7 @@ export default function RutasPage() {
                 placeholder="Copia el rango de tu Excel y pégalo aquí (Ctrl+V). Incluye la fila de encabezados."
                 value={pasteText}
                 onChange={e => setPasteText(e.target.value)}
+                onPaste={handleTextareaPaste}
                 rows={8}
               />
               {pasteText.trim().length > 0 && (
@@ -404,10 +458,13 @@ export default function RutasPage() {
           ) : rutas.length === 0 ? (
             <div className="empty-state"><p>No hay rutas cargadas todavía.</p></div>
           ) : (
-            rutas.map(ruta => (
+            rutas.map(ruta => {
+              const totalVersiones = countVersionesByMesAño.get(`${ruta.mes}-${ruta.año}`) || 1
+              const nombreConVersion = totalVersiones > 1 ? `${ruta.nombre_mes} · v${ruta.version}` : ruta.nombre_mes
+              return (
               <div key={ruta.id} className="ciclo-card">
                 <div className="ciclo-card-main">
-                  <div className="ciclo-card-mes">{ruta.nombre_mes}</div>
+                  <div className="ciclo-card-mes">{nombreConVersion}</div>
                   <div className="ciclo-card-meta">
                     {ruta.estado === 'activo' ? (
                       <span className="badge badge-activo">🟢 ACTIVA</span>
@@ -429,16 +486,22 @@ export default function RutasPage() {
                   <button className="btn-danger" onClick={() => askEliminar(ruta)}>🗑️ Eliminar</button>
                 </div>
               </div>
-            ))
+              )
+            })
           )}
         </div>
       </main>
+
+      {mesAnioModal && (
+        <MesAnioModal onCancel={handleMesAnioCancelar} onContinuar={handleMesAnioContinuar} />
+      )}
 
       {preview && (
         <RutaPreviewModal
           data={preview.data}
           archivoNombre={preview.archivoNombre}
-          mesDetectado={preview.mesDetectado}
+          mes={preview.mes}
+          año={preview.año}
           rutas={rutas}
           sitiosById={sitiosById}
           onCancel={closePreview}

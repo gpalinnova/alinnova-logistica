@@ -1,21 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { MESES, nombreMes } from '../lib/parseRutasExcel'
+import { useMemo } from 'react'
+import { nombreMes } from '../lib/parseRutasExcel'
 
-export default function RutaPreviewModal({ data, archivoNombre, mesDetectado, rutas, sitiosById, onCancel, onConfirm, saving }) {
-  const [mes, setMes] = useState(mesDetectado?.mes ?? '')
-  const [año, setAño] = useState(mesDetectado?.año ?? '')
+export default function RutaPreviewModal({ data, archivoNombre, mes, año, rutas, sitiosById, onCancel, onConfirm, saving }) {
+  const nombreMesActual = nombreMes(mes, año)
 
-  const necesitaSeleccion = !mesDetectado
-  const mesNum = mes ? Number(mes) : null
-  const añoNum = año ? Number(año) : null
-  const nombreMesActual = mesNum && añoNum ? nombreMes(mesNum, añoNum) : null
-
-  const existingRuta = useMemo(() => {
-    if (!mesNum || !añoNum) return null
-    return rutas.find(r => r.mes === mesNum && r.año === añoNum) || null
-  }, [rutas, mesNum, añoNum])
+  const versionesExistentes = useMemo(
+    () => rutas.filter(r => r.mes === mes && r.año === año),
+    [rutas, mes, año]
+  )
+  const siguienteVersion = versionesExistentes.length > 0
+    ? Math.max(...versionesExistentes.map(r => r.version)) + 1
+    : 1
 
   const idsFaltantes = useMemo(() => {
     const set = new Set()
@@ -25,38 +22,20 @@ export default function RutaPreviewModal({ data, archivoNombre, mesDetectado, ru
     return Array.from(set).sort((x, y) => x - y)
   }, [data.asignaciones, sitiosById])
 
-  const puedeConfirmar = Boolean(mesNum && añoNum) && !saving
-
   function handleConfirm() {
-    if (!puedeConfirmar) return
-    onConfirm({ mes: mesNum, año: añoNum, nombreMes: nombreMesActual, existingRuta })
+    if (saving) return
+    onConfirm({ mes, año })
   }
 
   return (
     <div className="modal-overlay" onClick={() => !saving && onCancel()}>
       <div className="modal-box modal-box-lg" onClick={e => e.stopPropagation()}>
-        <div className="modal-title">Vista previa: {nombreMesActual || 'selecciona el mes'}</div>
+        <div className="modal-title">Vista previa: {nombreMesActual}</div>
 
-        {necesitaSeleccion && (
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label>Mes</label>
-              <select value={mes} onChange={e => setMes(e.target.value)}>
-                <option value="">Selecciona...</option>
-                {MESES.map((m, i) => (
-                  <option key={m} value={i + 1}>{m}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Año</label>
-              <input type="number" value={año} onChange={e => setAño(e.target.value)} placeholder="Ej: 2026" />
-            </div>
-          </div>
-        )}
-
-        {existingRuta && (
-          <p className="modal-hint modal-hint-warning">Este mes ya está cargado. ¿Reemplazar?</p>
+        {versionesExistentes.length > 0 && (
+          <p className="modal-hint modal-hint-warning">
+            Ya existe{versionesExistentes.length > 1 ? `n ${versionesExistentes.length} versiones` : ' 1 versión'} de {nombreMesActual}. Esta se guardará como una nueva versión (v{siguienteVersion}) sin borrar las anteriores.
+          </p>
         )}
 
         {idsFaltantes.length > 0 && (
@@ -124,7 +103,7 @@ export default function RutaPreviewModal({ data, archivoNombre, mesDetectado, ru
 
         <div className="modal-actions">
           <button className="btn-secondary" onClick={onCancel} disabled={saving}>Cancelar</button>
-          <button className="btn-primary" onClick={handleConfirm} disabled={!puedeConfirmar}>
+          <button className="btn-primary" onClick={handleConfirm} disabled={saving}>
             {saving ? 'Guardando...' : 'Confirmar y Guardar'}
           </button>
         </div>
