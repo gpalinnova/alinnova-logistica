@@ -135,11 +135,8 @@ a {
 .home-card.accent-blue { border-top-color: #1565C0; }
 .home-card.accent-blue .home-card-title { color: #1565C0; }
 
-.home-card.accent-orange { border-top-color: #F57F17; }
-.home-card.accent-orange .home-card-title { color: #F57F17; }
-
-.home-card.accent-green { border-top-color: #2D6A4F; }
-.home-card.accent-green .home-card-title { color: #2D6A4F; }
+.home-card.accent-indigo { border-top-color: #1e40af; }
+.home-card.accent-indigo .home-card-title { color: #1e40af; }
 
 /* ── Main content ── */
 .main-content {

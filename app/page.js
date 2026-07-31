@@ -2,8 +2,7 @@ import Link from 'next/link'
 
 const AREAS = [
   { href: '/reforzados', icon: '🚚', title: 'Reforzados', desc: 'Distribución de refuerzos y empaques', accent: 'accent-blue' },
-  { href: '/panaderia', icon: '🥐', title: 'Panadería', desc: 'Logística de línea panadería', accent: 'accent-orange' },
-  { href: '/gastronomia', icon: '🍽️', title: 'Gastronomía', desc: 'Logística de línea gastronomía', accent: 'accent-green' },
+  { href: '/logistica', icon: '🚚', title: 'Logística Alinnova', desc: 'Logística de línea Panadería y Gastronomía', accent: 'accent-indigo' },
 ]
 
 export default function Home() {
