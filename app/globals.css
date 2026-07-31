@@ -132,8 +132,8 @@ a {
 }
 
 /* ── Acentos de color por área ── */
-.home-card.accent-blue { border-top-color: #1565C0; }
-.home-card.accent-blue .home-card-title { color: #1565C0; }
+.home-card.accent-green { border-top-color: #1a472a; }
+.home-card.accent-green .home-card-title { color: #1a472a; }
 
 .home-card.accent-indigo { border-top-color: #1e40af; }
 .home-card.accent-indigo .home-card-title { color: #1e40af; }
