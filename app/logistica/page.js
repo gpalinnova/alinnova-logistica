@@ -1,17 +1,25 @@
+import Link from 'next/link'
 import PageHeader from '../../components/PageHeader'
+
+const SECCIONES = [
+  { href: '/logistica/data-maestra', icon: '🗂️', title: 'Data Maestra', desc: 'Productos, sitios y rutas del módulo', accent: 'accent-indigo' },
+  { href: '/logistica/operaciones', icon: '📅', title: 'Operaciones del Día', desc: 'Importar OC, ruteo, remisiones y ruteros', accent: 'accent-indigo' },
+]
 
 export default function LogisticaPage() {
   return (
     <div className="app-layout">
       <main className="main-content">
-        <PageHeader backHref="/" backLabel="Volver al inicio" title="🚚 Logística Alinnova" subtitle="Módulo en construcción" />
+        <PageHeader backHref="/" backLabel="Volver al inicio" title="🚚 Logística Alinnova" subtitle="Panadería y Gastronomía" />
         <div className="page-content">
-          <div className="coming-soon-wrap">
-            <div className="coming-soon-card">
-              <div className="coming-soon-emoji">🚚</div>
-              <div className="coming-soon-title">Logística Alinnova</div>
-              <p className="coming-soon-text">Próximamente encontrarás aquí la gestión unificada de las líneas de Panadería y Gastronomía.</p>
-            </div>
+          <div className="home-cards">
+            {SECCIONES.map(item => (
+              <Link key={item.href} href={item.href} className={`home-card ${item.accent}`}>
+                <div className="home-card-icon">{item.icon}</div>
+                <div className="home-card-title">{item.title}</div>
+                <div className="home-card-desc">{item.desc}</div>
+              </Link>
+            ))}
           </div>
         </div>
       </main>
