@@ -2110,3 +2110,65 @@ a {
 
 .embalaje-editor-nota-delete { background: #fff; color: #b91c1c; border-color: #fca5a5; }
 .embalaje-editor-nota-delete:hover { background: #fef2f2; }
+
+/* ── Logística: filtros por modalidad y pills de producto ── */
+.logistica-filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.logistica-filter-tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.logistica-filter-tab:hover {
+  background: #f3f4f6;
+}
+
+.logistica-filter-tab.active {
+  background: #3D1F3D;
+  border-color: #3D1F3D;
+  color: #fff;
+}
+
+.logistica-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.86rem;
+  color: #374151;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.logistica-mono {
+  font-family: 'Courier New', monospace;
+}
+
+.logistica-muted {
+  color: #9ca3af;
+}
+
+.logistica-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.logistica-pill-panaderia { background: #ea580c; }
+.logistica-pill-ampm { background: #7c3aed; }
+.logistica-pill-gastronomia { background: #1a472a; }
