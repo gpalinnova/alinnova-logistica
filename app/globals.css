@@ -2253,3 +2253,14 @@ a {
   margin-top: 6px;
   color: #15803d;
 }
+
+.logistica-warning-text {
+  color: #E65100;
+  font-weight: 700;
+}
+
+.logistica-badge-warning {
+  background: #FFF3E0;
+  color: #E65100;
+  font-weight: 700;
+}
