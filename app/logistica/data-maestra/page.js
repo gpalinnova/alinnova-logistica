@@ -5,6 +5,7 @@ const ITEMS = [
   { href: '/logistica/data-maestra/productos', icon: '🥐', title: 'Productos', desc: 'Productos del módulo Logística', accent: 'accent-blue' },
   { href: '/logistica/data-maestra/sitios', icon: '🏫', title: 'Sitios', desc: 'Sitios de entrega', accent: 'accent-green' },
   { href: '/logistica/data-maestra/rutas', icon: '🛣️', title: 'Rutas', desc: 'Rutas de reparto', accent: 'accent-yellow' },
+  { href: '/logistica/data-maestra/importar-asignaciones', icon: '🎯', title: 'Importar asignaciones', desc: 'Sembrar asignación sitio-ruta desde el mapa base', accent: 'accent-purple' },
 ]
 
 function NavCard({ href, icon, title, desc, accent }) {
