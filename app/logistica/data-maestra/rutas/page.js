@@ -155,7 +155,7 @@ export default function RutasLogisticaPage() {
           </div>
 
           <div className="logistica-info-box">
-            💡 La asignación de sitios a cada ruta se hace desde el módulo de Ruteo del Día una vez importadas las OCs.
+            💡 La asignación de sitios a cada ruta se hace desde el módulo de Rutero del Día una vez importadas las OCs.
           </div>
 
           {errorMsg && <div className="form-error-banner">{errorMsg}</div>}

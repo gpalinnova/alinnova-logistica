@@ -113,7 +113,7 @@ function LimpiarModal({ totalAsignados, onClose, onConfirmar, saving }) {
   )
 }
 
-export default function RuteoPage() {
+export default function RuteroPage() {
   const [fechasDisponibles, setFechasDisponibles] = useState([])
   const [fecha, setFecha] = useState('')
   const [modalidad, setModalidad] = useState('')
@@ -362,7 +362,7 @@ export default function RuteoPage() {
         <PageHeader
           backHref="/logistica/operaciones"
           backLabel="Volver"
-          title="🗺️ Ruteo del Día — Logística"
+          title="🗺️ Rutero del Día — Logística"
           subtitle={subtitle}
         />
         <div className="page-content">

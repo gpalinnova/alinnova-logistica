@@ -3,7 +3,7 @@ import PageHeader from '../../components/PageHeader'
 
 const SECCIONES = [
   { href: '/logistica/data-maestra', icon: '🗂️', title: 'Data Maestra', desc: 'Productos, sitios y rutas del módulo', accent: 'accent-indigo' },
-  { href: '/logistica/operaciones', icon: '📅', title: 'Operaciones del Día', desc: 'Importar OC, ruteo, remisiones y ruteros', accent: 'accent-indigo' },
+  { href: '/logistica/operaciones', icon: '📅', title: 'Operaciones del Día', desc: 'Importar OC, rutero, remisiones y ruteros', accent: 'accent-indigo' },
 ]
 
 export default function LogisticaPage() {
