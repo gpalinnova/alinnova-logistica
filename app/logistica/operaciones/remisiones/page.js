@@ -13,21 +13,15 @@ const MODALIDAD_INFO = {
   gastronomia: { label: 'Gastronomía', className: 'logistica-pill-gastronomia' },
 }
 
-function claveRemision(sitioId, modalidad) {
-  return `${sitioId}|${modalidad}`
-}
-
-function ocsDeLinea(d) {
-  if (d.numero_oc_linea && d.numero_oc_linea.trim()) return [d.numero_oc_linea.trim()]
-  return (d.oc?.numero_oc || '').split(',').map(s => s.trim()).filter(Boolean)
+function claveRemision(sitioId, modalidad, numeroOc) {
+  return `${sitioId}|${modalidad}|${numeroOc}`
 }
 
 function construirRemisionesDelDia(detalleData) {
   const map = new Map()
-  const ocsPorKey = new Map()
   for (const d of detalleData) {
-    if (!d.sitio || !d.producto) continue
-    const key = claveRemision(d.sitio.id, d.producto.modalidad)
+    if (!d.sitio || !d.producto || !d.numero_oc_linea) continue
+    const key = claveRemision(d.sitio.id, d.producto.modalidad, d.numero_oc_linea)
     if (!map.has(key)) {
       map.set(key, {
         key,
@@ -39,12 +33,11 @@ function construirRemisionesDelDia(detalleData) {
         localidad: d.sitio.localidad,
         sede_educativa: d.sitio.sede_educativa,
         modalidad: d.producto.modalidad,
-        oc_id: d.oc?.id || null,
+        numero_oc: d.numero_oc_linea,
         productos: [],
         total_unidades: 0,
         total_valorizado: 0,
       })
-      ocsPorKey.set(key, new Set())
     }
     const row = map.get(key)
     const valorTotal = d.cantidad * (d.producto.valor_unitario || 0)
@@ -58,19 +51,15 @@ function construirRemisionesDelDia(detalleData) {
     })
     row.total_unidades += d.cantidad
     row.total_valorizado += valorTotal
-    ocsDeLinea(d).forEach(oc => ocsPorKey.get(key).add(oc))
   }
 
   const remisiones = Array.from(map.values())
-  remisiones.forEach(r => {
-    r.numeros_oc = Array.from(ocsPorKey.get(r.key))
-    r.numero_oc = r.numeros_oc.join(' / ')
-  })
   remisiones.forEach(r => r.productos.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')))
   remisiones.sort((a, b) =>
     (a.localidad || '').localeCompare(b.localidad || '', 'es') ||
     (a.nombre_institucion || '').localeCompare(b.nombre_institucion || '', 'es') ||
-    (a.modalidad || '').localeCompare(b.modalidad || '')
+    (a.modalidad || '').localeCompare(b.modalidad || '') ||
+    (a.numero_oc || '').localeCompare(b.numero_oc || '')
   )
   return remisiones
 }
@@ -133,10 +122,10 @@ export default function RemisionesPage() {
         .select(`
           id, cantidad, numero_oc_linea,
           sitio:logistica_sitios(id, punto_wms, nombre_institucion, nombre_sitio, direccion, localidad, sede_educativa),
-          producto:logistica_productos(id, nombre, nombre_corto, modalidad, valor_unitario, codigo_articulo),
-          oc:logistica_oc(id, numero_oc)
+          producto:logistica_productos(id, nombre, nombre_corto, modalidad, valor_unitario, codigo_articulo)
         `)
         .eq('fecha_entrega_efectiva', fecha)
+        .not('numero_oc_linea', 'is', null)
       if (errDetalle) throw errDetalle
 
       const sinPrecio = construirProductosSinPrecio(detalleData || [])
@@ -144,12 +133,12 @@ export default function RemisionesPage() {
 
       const { data: existentesData, error: errExistentes } = await supabase
         .from('logistica_remisiones')
-        .select('sitio_id, modalidad, numero_remision')
+        .select('sitio_id, modalidad, numero_oc, numero_remision')
         .eq('fecha_entrega_efectiva', fecha)
       if (errExistentes) throw errExistentes
 
       const existentes = {}
-      for (const e of existentesData || []) existentes[claveRemision(e.sitio_id, e.modalidad)] = e.numero_remision
+      for (const e of existentesData || []) existentes[claveRemision(e.sitio_id, e.modalidad, e.numero_oc)] = e.numero_remision
 
       setProductosSinPrecio(sinPrecio)
       setRemisionesDelDia(remisiones)
@@ -216,6 +205,14 @@ export default function RemisionesPage() {
       rangoInicio = inicioData
       const rangoFin = rangoInicio + n - 1
 
+      const { data: ocsData, error: errOcs } = await supabase.from('logistica_oc').select('id, numero_oc')
+      if (errOcs) throw errOcs
+      const ocsDisponibles = ocsData || []
+      function resolverOcId(numeroOc) {
+        const match = ocsDisponibles.find(o => (o.numero_oc || '').includes(numeroOc))
+        return match?.id || null
+      }
+
       const fechaEmisionISO = todayLocalISO()
       const rowsInsert = seleccionadas.map((r, i) => ({
         numero_remision: rangoInicio + i,
@@ -223,7 +220,7 @@ export default function RemisionesPage() {
         fecha_entrega_efectiva: fecha,
         sitio_id: r.sitio_id,
         modalidad: r.modalidad,
-        oc_id: r.oc_id,
+        oc_id: resolverOcId(r.numero_oc),
         numero_oc: r.numero_oc,
         total_unidades: r.total_unidades,
         total_valorizado: r.total_valorizado,
@@ -241,7 +238,6 @@ export default function RemisionesPage() {
         fechaEntrega: fmtFechaCorta(fecha),
         sitio: r,
         oc: r.numero_oc,
-        numeros_oc: r.numeros_oc,
         modalidad: r.modalidad,
         productos: r.productos,
         totalUnd: r.total_unidades,
