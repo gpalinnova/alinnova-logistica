@@ -187,6 +187,7 @@ export default function ImportarOCPage() {
           fecha_entrega_original: l.fecha_entrega,
           fecha_entrega_efectiva: l.fecha_entrega,
           fecha_consumo: l.fecha_consumo,
+          numero_oc_linea: l.numero_oc || null,
           observacion: null,
         }))
 

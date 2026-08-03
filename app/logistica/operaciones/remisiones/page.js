@@ -17,8 +17,14 @@ function claveRemision(sitioId, modalidad) {
   return `${sitioId}|${modalidad}`
 }
 
+function ocsDeLinea(d) {
+  if (d.numero_oc_linea && d.numero_oc_linea.trim()) return [d.numero_oc_linea.trim()]
+  return (d.oc?.numero_oc || '').split(',').map(s => s.trim()).filter(Boolean)
+}
+
 function construirRemisionesDelDia(detalleData) {
   const map = new Map()
+  const ocsPorKey = new Map()
   for (const d of detalleData) {
     if (!d.sitio || !d.producto) continue
     const key = claveRemision(d.sitio.id, d.producto.modalidad)
@@ -34,11 +40,11 @@ function construirRemisionesDelDia(detalleData) {
         sede_educativa: d.sitio.sede_educativa,
         modalidad: d.producto.modalidad,
         oc_id: d.oc?.id || null,
-        numero_oc: d.oc?.numero_oc || '',
         productos: [],
         total_unidades: 0,
         total_valorizado: 0,
       })
+      ocsPorKey.set(key, new Set())
     }
     const row = map.get(key)
     const valorTotal = d.cantidad * (d.producto.valor_unitario || 0)
@@ -52,9 +58,14 @@ function construirRemisionesDelDia(detalleData) {
     })
     row.total_unidades += d.cantidad
     row.total_valorizado += valorTotal
+    ocsDeLinea(d).forEach(oc => ocsPorKey.get(key).add(oc))
   }
 
   const remisiones = Array.from(map.values())
+  remisiones.forEach(r => {
+    r.numeros_oc = Array.from(ocsPorKey.get(r.key))
+    r.numero_oc = r.numeros_oc.join(' / ')
+  })
   remisiones.forEach(r => r.productos.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')))
   remisiones.sort((a, b) =>
     (a.localidad || '').localeCompare(b.localidad || '', 'es') ||
@@ -120,7 +131,7 @@ export default function RemisionesPage() {
       const { data: detalleData, error: errDetalle } = await supabase
         .from('logistica_oc_detalle')
         .select(`
-          id, cantidad,
+          id, cantidad, numero_oc_linea,
           sitio:logistica_sitios(id, punto_wms, nombre_institucion, nombre_sitio, direccion, localidad, sede_educativa),
           producto:logistica_productos(id, nombre, nombre_corto, modalidad, valor_unitario, codigo_articulo),
           oc:logistica_oc(id, numero_oc)
@@ -230,6 +241,7 @@ export default function RemisionesPage() {
         fechaEntrega: fmtFechaCorta(fecha),
         sitio: r,
         oc: r.numero_oc,
+        numeros_oc: r.numeros_oc,
         modalidad: r.modalidad,
         productos: r.productos,
         totalUnd: r.total_unidades,
