@@ -143,6 +143,7 @@ export default function ImportarOCPage() {
           codigo_articulo: p.codigo_articulo,
           nombre: p.nombre,
           modalidad: p.modalidad_detectada,
+          familia_producto: p.familia_detectada,
           capacidad_canastilla: 0,
           valor_unitario: 0,
         })))
@@ -367,7 +368,7 @@ export default function ImportarOCPage() {
                   <div className="data-table-wrap">
                     <table className="data-table">
                       <thead>
-                        <tr><th>Código artículo</th><th>Nombre</th><th>Modalidad detectada</th></tr>
+                        <tr><th>Código artículo</th><th>Nombre</th><th>Modalidad detectada</th><th>Familia detectada</th></tr>
                       </thead>
                       <tbody>
                         {preview.productosNuevos.map(p => {
@@ -377,6 +378,7 @@ export default function ImportarOCPage() {
                               <td className="logistica-mono">{p.codigo_articulo}</td>
                               <td>{p.nombre}</td>
                               <td><span className={`logistica-pill ${info?.className || ''}`}>{info?.label || p.modalidad_detectada}</span></td>
+                              <td><span className="logistica-pill logistica-pill-familia">{p.familia_detectada}</span></td>
                             </tr>
                           )
                         })}
