@@ -29,6 +29,7 @@ export default function ProductosLogisticaPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [toast, setToast] = useState(null)
   const [filtroModalidad, setFiltroModalidad] = useState('todos')
+  const [filtroFamilia, setFiltroFamilia] = useState('todas')
   const [search, setSearch] = useState('')
   const [mostrarInactivos, setMostrarInactivos] = useState(false)
   const [modalState, setModalState] = useState(null)
@@ -48,10 +49,15 @@ export default function ProductosLogisticaPage() {
     setLoading(false)
   }
 
+  const familias = useMemo(() => {
+    return Array.from(new Set(productos.map(p => p.familia_producto).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es'))
+  }, [productos])
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     return productos.filter(p => {
       if (filtroModalidad !== 'todos' && p.modalidad !== filtroModalidad) return false
+      if (filtroFamilia !== 'todas' && p.familia_producto !== filtroFamilia) return false
       if (!mostrarInactivos && !p.activo) return false
       if (term) {
         const matches = [p.nombre, p.nombre_corto, String(p.codigo_articulo)]
@@ -60,7 +66,7 @@ export default function ProductosLogisticaPage() {
       }
       return true
     })
-  }, [productos, filtroModalidad, search, mostrarInactivos])
+  }, [productos, filtroModalidad, filtroFamilia, search, mostrarInactivos])
 
   const conteo = useMemo(() => {
     const activos = productos.filter(p => p.activo)
@@ -69,6 +75,7 @@ export default function ProductosLogisticaPage() {
       panaderia: activos.filter(p => p.modalidad === 'panaderia').length,
       am_pm: activos.filter(p => p.modalidad === 'am_pm').length,
       gastronomia: activos.filter(p => p.modalidad === 'gastronomia').length,
+      familias: new Set(activos.map(p => p.familia_producto).filter(Boolean)).size,
     }
   }, [productos])
 
@@ -127,7 +134,7 @@ export default function ProductosLogisticaPage() {
           backHref="/logistica/data-maestra"
           backLabel="Volver"
           title="🥐 Productos — Logística"
-          subtitle={`${conteo.activos} productos activos · ${conteo.panaderia} panadería · ${conteo.am_pm} AM-PM · ${conteo.gastronomia} gastronomía`}
+          subtitle={`${conteo.activos} productos activos · ${conteo.familias} familias · ${conteo.panaderia} panadería · ${conteo.am_pm} AM-PM · ${conteo.gastronomia} gastronomía`}
         />
         <div className="page-content">
           <div className="logistica-filter-tabs">
@@ -151,6 +158,10 @@ export default function ProductosLogisticaPage() {
                 placeholder="🔎 Buscar por nombre o código..."
               />
             </div>
+            <select value={filtroFamilia} onChange={e => setFiltroFamilia(e.target.value)}>
+              <option value="todas">Todas las familias</option>
+              {familias.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
             <label className="logistica-checkbox-label">
               <input type="checkbox" checked={mostrarInactivos} onChange={e => setMostrarInactivos(e.target.checked)} />
               Mostrar inactivos
@@ -172,6 +183,7 @@ export default function ProductosLogisticaPage() {
                     <th>Código artículo</th>
                     <th>Nombre corto</th>
                     <th>Modalidad</th>
+                    <th>Familia</th>
                     <th>Gramaje</th>
                     <th>Capacidad canastilla</th>
                     <th>Valor unitario</th>
@@ -187,6 +199,7 @@ export default function ProductosLogisticaPage() {
                         <td className="logistica-mono">{producto.codigo_articulo}</td>
                         <td>{producto.nombre_corto}</td>
                         <td><span className={`logistica-pill ${modInfo?.className || ''}`}>{modInfo?.label || producto.modalidad}</span></td>
+                        <td><span className="logistica-pill logistica-pill-familia">{producto.familia_producto}</span></td>
                         <td>{producto.gramaje_gr != null ? `${producto.gramaje_gr}g` : <span className="logistica-muted">—</span>}</td>
                         <td>{producto.capacidad_canastilla > 0 ? producto.capacidad_canastilla : <span className="logistica-muted">—</span>}</td>
                         <td>{producto.valor_unitario > 0 ? formatCOP(producto.valor_unitario) : <span className="logistica-muted">—</span>}</td>
@@ -220,6 +233,7 @@ export default function ProductosLogisticaPage() {
           onClose={closeModal}
           onSubmit={handleSubmit}
           saving={saving}
+          familiasExistentes={familias}
         />
       )}
 

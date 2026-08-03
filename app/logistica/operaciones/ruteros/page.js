@@ -50,8 +50,8 @@ async function validarSitiosSinRuta(fecha, modalidad) {
 
   const { data: asignaciones, error: errAsig } = await supabase
     .from('logistica_sitio_ruta')
-    .select('sitio_id, ruta:logistica_rutas!inner(modalidad)')
-    .eq('ruta.modalidad', modalidad)
+    .select('sitio_id, ruta:logistica_rutas!inner(activo)')
+    .eq('ruta.activo', true)
     .in('sitio_id', Array.from(sitiosDelDia.keys()))
   if (errAsig) throw errAsig
 
@@ -106,8 +106,8 @@ async function cargarConfirmacion(fecha, modalidad) {
       .eq('producto.modalidad', modalidad),
     supabase
       .from('logistica_sitio_ruta')
-      .select('sitio_id, ruta:logistica_rutas!inner(id, nombre, conductor, auxiliar, placa_vehiculo, modalidad)')
-      .eq('ruta.modalidad', modalidad),
+      .select('sitio_id, ruta:logistica_rutas!inner(id, nombre, conductor, auxiliar, placa_vehiculo, activo)')
+      .eq('ruta.activo', true),
   ])
   if (errDetalle) throw errDetalle
   if (errAsig) throw errAsig

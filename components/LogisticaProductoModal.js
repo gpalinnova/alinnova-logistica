@@ -8,11 +8,12 @@ const MODALIDAD_OPTIONS = [
   { value: 'gastronomia', label: '🍽️ Gastronomía' },
 ]
 
-export default function LogisticaProductoModal({ mode, initialData, onClose, onSubmit, saving }) {
+export default function LogisticaProductoModal({ mode, initialData, onClose, onSubmit, saving, familiasExistentes = [] }) {
   const [codigoArticulo, setCodigoArticulo] = useState(initialData?.codigo_articulo ?? '')
   const [nombre, setNombre] = useState(initialData?.nombre || '')
   const [nombreCorto, setNombreCorto] = useState(initialData?.nombre_corto || '')
   const [modalidad, setModalidad] = useState(initialData?.modalidad || MODALIDAD_OPTIONS[0].value)
+  const [familiaProducto, setFamiliaProducto] = useState(initialData?.familia_producto || '')
   const [gramajeGr, setGramajeGr] = useState(initialData?.gramaje_gr ?? '')
   const [capacidadCanastilla, setCapacidadCanastilla] = useState(initialData?.capacidad_canastilla ?? 0)
   const [valorUnitario, setValorUnitario] = useState(initialData?.valor_unitario ?? 0)
@@ -38,12 +39,17 @@ export default function LogisticaProductoModal({ mode, initialData, onClose, onS
       setError('Selecciona una modalidad válida')
       return
     }
+    if (!familiaProducto.trim()) {
+      setError('La familia de producto es obligatoria')
+      return
+    }
     setError('')
     onSubmit({
       codigo_articulo: codigoNum,
       nombre: nombre.trim(),
       nombre_corto: nombreCorto.trim(),
       modalidad,
+      familia_producto: familiaProducto.trim().toUpperCase(),
       gramaje_gr: gramajeGr === '' ? null : Number(gramajeGr),
       capacidad_canastilla: capacidadCanastilla === '' ? 0 : Number(capacidadCanastilla),
       valor_unitario: valorUnitario === '' ? 0 : Number(valorUnitario),
@@ -84,6 +90,20 @@ export default function LogisticaProductoModal({ mode, initialData, onClose, onS
           <div className="form-group">
             <label>Nombre corto</label>
             <input type="text" value={nombreCorto} onChange={e => setNombreCorto(e.target.value)} placeholder="Ej: Pan Maíz 50g" />
+          </div>
+
+          <div className="form-group">
+            <label>Familia de producto</label>
+            <input
+              type="text"
+              list="familias-producto-list"
+              value={familiaProducto}
+              onChange={e => setFamiliaProducto(e.target.value)}
+              placeholder="Ej: PAN DE MAIZ"
+            />
+            <datalist id="familias-producto-list">
+              {familiasExistentes.map(f => <option key={f} value={f} />)}
+            </datalist>
           </div>
 
           <div className="form-grid-2">

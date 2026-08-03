@@ -2,15 +2,8 @@
 
 import { useState } from 'react'
 
-const MODALIDAD_OPTIONS = [
-  { value: 'panaderia', label: '🥐 Panadería' },
-  { value: 'am_pm', label: '☀️ AM-PM' },
-  { value: 'gastronomia', label: '🍽️ Gastronomía' },
-]
-
 export default function LogisticaRutaModal({ mode, initialData, onClose, onSubmit, saving }) {
   const [nombre, setNombre] = useState(initialData?.nombre || '')
-  const [modalidad, setModalidad] = useState(initialData?.modalidad || MODALIDAD_OPTIONS[0].value)
   const [localidadPrincipal, setLocalidadPrincipal] = useState(initialData?.localidad_principal || '')
   const [placaVehiculo, setPlacaVehiculo] = useState(initialData?.placa_vehiculo || '')
   const [conductor, setConductor] = useState(initialData?.conductor || '')
@@ -24,14 +17,9 @@ export default function LogisticaRutaModal({ mode, initialData, onClose, onSubmi
       setError('El nombre de la ruta es obligatorio')
       return
     }
-    if (!MODALIDAD_OPTIONS.some(m => m.value === modalidad)) {
-      setError('Selecciona una modalidad válida')
-      return
-    }
     setError('')
     onSubmit({
       nombre: nombre.trim(),
-      modalidad,
       localidad_principal: localidadPrincipal.trim() || null,
       placa_vehiculo: placaVehiculo.trim() || null,
       conductor: conductor.trim() || null,
@@ -45,17 +33,10 @@ export default function LogisticaRutaModal({ mode, initialData, onClose, onSubmi
       <div className="modal-box modal-box-lg" onClick={e => e.stopPropagation()}>
         <div className="modal-title">{mode === 'edit' ? 'Editar Ruta' : 'Nueva Ruta'}</div>
         <form onSubmit={handleSubmit}>
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label>Nombre de la ruta</label>
-              <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: BOSA PAN 1" />
-            </div>
-            <div className="form-group">
-              <label>Modalidad</label>
-              <select value={modalidad} onChange={e => setModalidad(e.target.value)}>
-                {MODALIDAD_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
-            </div>
+          <div className="form-group">
+            <label>Nombre de la ruta</label>
+            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: H-BOSA - RICARDO SUAREZ" />
+            <p className="modal-hint">Formato sugerido: "&lt;LOCALIDAD&gt; &lt;NUMERO&gt; - &lt;NOMBRE CONDUCTOR&gt;"</p>
           </div>
 
           <div className="form-group">

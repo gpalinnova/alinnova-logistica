@@ -6,25 +6,11 @@ import Toast from '../../../../components/Toast'
 import LogisticaRutaModal from '../../../../components/LogisticaRutaModal'
 import { supabase } from '../../../../lib/supabase'
 
-const MODALIDAD_TABS = [
-  { key: 'todas', label: 'Todas' },
-  { key: 'panaderia', label: '🥐 Panadería' },
-  { key: 'am_pm', label: '☀️ AM-PM' },
-  { key: 'gastronomia', label: '🍽️ Gastronomía' },
-]
-
-const MODALIDAD_INFO = {
-  panaderia: { label: 'Panadería', className: 'logistica-pill-panaderia' },
-  am_pm: { label: 'AM-PM', className: 'logistica-pill-ampm' },
-  gastronomia: { label: 'Gastronomía', className: 'logistica-pill-gastronomia' },
-}
-
 export default function RutasLogisticaPage() {
   const [rutas, setRutas] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [toast, setToast] = useState(null)
-  const [filtroModalidad, setFiltroModalidad] = useState('todas')
   const [search, setSearch] = useState('')
   const [mostrarInactivas, setMostrarInactivas] = useState(false)
   const [modalState, setModalState] = useState(null)
@@ -34,7 +20,7 @@ export default function RutasLogisticaPage() {
 
   async function fetchRutas() {
     setLoading(true)
-    const { data, error } = await supabase.from('logistica_rutas').select('*').order('modalidad').order('nombre')
+    const { data, error } = await supabase.from('logistica_rutas').select('*').order('localidad_principal').order('nombre')
     if (error) {
       setErrorMsg('No se pudieron cargar las rutas.')
     } else {
@@ -47,7 +33,6 @@ export default function RutasLogisticaPage() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     return rutas.filter(r => {
-      if (filtroModalidad !== 'todas' && r.modalidad !== filtroModalidad) return false
       if (!mostrarInactivas && !r.activo) return false
       if (term) {
         const matches = [r.nombre, r.localidad_principal, r.placa_vehiculo, r.conductor, r.auxiliar]
@@ -56,15 +41,12 @@ export default function RutasLogisticaPage() {
       }
       return true
     })
-  }, [rutas, filtroModalidad, search, mostrarInactivas])
+  }, [rutas, search, mostrarInactivas])
 
   const conteo = useMemo(() => {
     const activas = rutas.filter(r => r.activo)
     return {
       activas: activas.length,
-      panaderia: activas.filter(r => r.modalidad === 'panaderia').length,
-      am_pm: activas.filter(r => r.modalidad === 'am_pm').length,
-      gastronomia: activas.filter(r => r.modalidad === 'gastronomia').length,
     }
   }, [rutas])
 
@@ -123,21 +105,9 @@ export default function RutasLogisticaPage() {
           backHref="/logistica/data-maestra"
           backLabel="Volver"
           title="🛣️ Rutas — Logística"
-          subtitle={`${conteo.activas} rutas activas · ${conteo.panaderia} panadería · ${conteo.am_pm} AM-PM · ${conteo.gastronomia} gastronomía`}
+          subtitle={`${conteo.activas} rutas activas`}
         />
         <div className="page-content">
-          <div className="logistica-filter-tabs">
-            {MODALIDAD_TABS.map(tab => (
-              <button
-                key={tab.key}
-                className={`logistica-filter-tab ${filtroModalidad === tab.key ? 'active' : ''}`}
-                onClick={() => setFiltroModalidad(tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
           <div className="page-toolbar spread">
             <div className="toolbar-search">
               <input
@@ -170,7 +140,6 @@ export default function RutasLogisticaPage() {
                 <thead>
                   <tr>
                     <th>Nombre</th>
-                    <th>Modalidad</th>
                     <th>Localidad principal</th>
                     <th>Placa</th>
                     <th>Conductor</th>
@@ -181,11 +150,9 @@ export default function RutasLogisticaPage() {
                 </thead>
                 <tbody>
                   {filtered.map(ruta => {
-                    const modInfo = MODALIDAD_INFO[ruta.modalidad]
                     return (
                       <tr key={ruta.id}>
                         <td>{ruta.nombre}</td>
-                        <td><span className={`logistica-pill ${modInfo?.className || ''}`}>{modInfo?.label || ruta.modalidad}</span></td>
                         <td>{ruta.localidad_principal || <span className="logistica-muted">—</span>}</td>
                         <td className="logistica-mono">{ruta.placa_vehiculo || <span className="logistica-muted">—</span>}</td>
                         <td>{ruta.conductor || <span className="logistica-muted">—</span>}</td>

@@ -197,7 +197,6 @@ export default function RuteroPage() {
         .from('logistica_rutas')
         .select('id, nombre, localidad_principal, placa_vehiculo, conductor')
         .eq('activo', true)
-        .eq('modalidad', modalidad)
         .order('localidad_principal')
         .order('nombre')
       if (errRutas) throw errRutas
