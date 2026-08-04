@@ -2219,6 +2219,8 @@ a {
 
 .section-collapsible.logistica-accent-orange { border-left-color: #ea580c; }
 
+.section-collapsible.logistica-accent-amarillo { border-left-color: #F9A825; background: #FFFDF5; }
+
 .logistica-section-pad {
   padding: 16px 22px;
 }

@@ -39,6 +39,7 @@ export default function ImportarOCPage() {
   const [ocExistente, setOcExistente] = useState(null)
   const [reemplazarOcElegido, setReemplazarOcElegido] = useState(false)
   const [decisionesSitios, setDecisionesSitios] = useState({})
+  const [decisionesActualizarWms, setDecisionesActualizarWms] = useState({})
   const [resultadoExito, setResultadoExito] = useState(null)
   const fileInputRef = useRef(null)
 
@@ -51,6 +52,7 @@ export default function ImportarOCPage() {
     setOcExistente(null)
     setReemplazarOcElegido(false)
     setDecisionesSitios({})
+    setDecisionesActualizarWms({})
     setResultadoExito(null)
   }
 
@@ -63,7 +65,7 @@ export default function ImportarOCPage() {
       if (parsed.lineasValidas.length === 0) throw new Error('El archivo no contiene líneas válidas para importar.')
 
       const [{ data: sitiosData, error: sitiosError }, { data: productosData, error: productosError }] = await Promise.all([
-        supabase.from('logistica_sitios').select('id, punto_wms, nombre_institucion'),
+        supabase.from('logistica_sitios').select('id, punto_wms, nombre_institucion, localidad'),
         supabase.from('logistica_productos').select('id, codigo_articulo, nombre'),
       ])
       if (sitiosError || productosError) throw new Error('No se pudieron consultar los sitios/productos existentes.')
@@ -87,8 +89,11 @@ export default function ImportarOCPage() {
       setOcExistente(ocExistenteData || null)
       setReemplazarOcElegido(false)
       const decisionesIniciales = {}
-      previewResult.sitiosConflictos.forEach(c => { decisionesIniciales[c.punto_wms] = 'mantener' })
+      previewResult.sitiosConflictoNombre.forEach(c => { decisionesIniciales[c.punto_wms] = 'mantener' })
       setDecisionesSitios(decisionesIniciales)
+      const decisionesWmsIniciales = {}
+      previewResult.sitiosActualizarWms.forEach(s => { decisionesWmsIniciales[s.wms_nuevo] = 'actualizar' })
+      setDecisionesActualizarWms(decisionesWmsIniciales)
       setEstado('preview')
     } catch (err) {
       setErrorMsg(err.message || 'No se pudo procesar el archivo.')
@@ -152,11 +157,19 @@ export default function ImportarOCPage() {
 
       const puntosActualizar = Object.entries(decisionesSitios).filter(([, v]) => v === 'actualizar').map(([k]) => Number(k))
       for (const punto of puntosActualizar) {
-        const conflicto = preview.sitiosConflictos.find(c => c.punto_wms === punto)
+        const conflicto = preview.sitiosConflictoNombre.find(c => c.punto_wms === punto)
         if (conflicto) {
           const { error } = await supabase.from('logistica_sitios').update({ nombre_institucion: conflicto.nombre_nuevo }).eq('punto_wms', punto)
           if (error) throw new Error(`No se pudo actualizar el sitio ${punto}.`)
         }
+      }
+
+      const sitiosActualizarWmsElegidos = preview.sitiosActualizarWms.filter(
+        s => (decisionesActualizarWms[s.wms_nuevo] || 'actualizar') === 'actualizar'
+      )
+      for (const s of sitiosActualizarWmsElegidos) {
+        const { error } = await supabase.from('logistica_sitios').update({ punto_wms: s.wms_nuevo }).eq('id', s.sitio_existente_id)
+        if (error) throw new Error(`No se pudo actualizar el Punto WMS del sitio ${s.sitio_existente_nombre}.`)
       }
 
       const numeroOcJoined = ocInfo.numerosOc.join(',')
@@ -176,13 +189,14 @@ export default function ImportarOCPage() {
       if (sitiosError2 || productosError2) throw new Error('No se pudieron recargar sitios/productos para el detalle.')
 
       const sitioIdPorPunto = new Map((sitiosData2 || []).map(s => [s.punto_wms, s.id]))
+      const sitioIdPorWmsNuevo = new Map(preview.sitiosActualizarWms.map(s => [s.wms_nuevo, s.sitio_existente_id]))
       const productoIdPorCodigo = new Map((productosData2 || []).map(p => [p.codigo_articulo, p.id]))
 
       const detalleRows = ocInfo.lineasValidas
-        .filter(l => l.fecha_entrega && sitioIdPorPunto.has(l.punto_wms) && productoIdPorCodigo.has(l.codigo_articulo))
+        .filter(l => l.fecha_entrega && (sitioIdPorWmsNuevo.has(l.punto_wms) || sitioIdPorPunto.has(l.punto_wms)) && productoIdPorCodigo.has(l.codigo_articulo))
         .map(l => ({
           oc_id: ocCreada.id,
-          sitio_id: sitioIdPorPunto.get(l.punto_wms),
+          sitio_id: sitioIdPorWmsNuevo.get(l.punto_wms) || sitioIdPorPunto.get(l.punto_wms),
           producto_id: productoIdPorCodigo.get(l.codigo_articulo),
           cantidad: l.cantidad,
           fecha_entrega_original: l.fecha_entrega,
@@ -201,6 +215,7 @@ export default function ImportarOCPage() {
         totalLineas: detalleRows.length,
         sitiosCreados: preview.sitiosNuevos.length,
         productosCreados: preview.productosNuevos.length,
+        sitiosActualizadosWms: sitiosActualizarWmsElegidos.length,
         numeroOc: numeroOcJoined,
       })
       setEstado('exito')
@@ -276,6 +291,7 @@ export default function ImportarOCPage() {
                 ✓ OC importada correctamente
                 <div className="logistica-exito-detalle">
                   {resultadoExito.totalLineas.toLocaleString('es-CO')} líneas · {resultadoExito.sitiosCreados} sitios nuevos · {resultadoExito.productosCreados} productos nuevos
+                  {resultadoExito.sitiosActualizadosWms > 0 && ` · ${resultadoExito.sitiosActualizadosWms} sitios actualizados al nuevo Punto WMS`}
                 </div>
               </div>
               <div className="page-toolbar" style={{ justifyContent: 'flex-start', gap: 12 }}>
@@ -389,15 +405,65 @@ export default function ImportarOCPage() {
                 </ColapsableSection>
               )}
 
-              {preview.sitiosConflictos.length > 0 && (
-                <ColapsableSection title="Sitios con nombre diferente al existente" count={preview.sitiosConflictos.length} accent="accent-red">
+              {preview.sitiosActualizarWms.length > 0 && (
+                <ColapsableSection
+                  title={`Sitios existentes con Punto WMS distinto (${preview.sitiosActualizarWms.length})`}
+                  count={preview.sitiosActualizarWms.length}
+                  accent="logistica-accent-amarillo"
+                  defaultOpen={preview.sitiosActualizarWms.length > 0}
+                >
+                  <p className="modal-hint">Estos colegios ya existen en la base con otro Punto WMS (probablemente creado temporalmente). Puedes actualizar el WMS al valor real del Excel.</p>
+                  <div className="data-table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr><th>Nombre</th><th>Localidad</th><th>WMS actual en BD</th><th>WMS nuevo en Excel</th><th>Acción</th></tr>
+                      </thead>
+                      <tbody>
+                        {preview.sitiosActualizarWms.map(s => (
+                          <tr key={s.wms_nuevo}>
+                            <td>{s.sitio_existente_nombre}</td>
+                            <td>{s.localidad}</td>
+                            <td className="logistica-mono">{s.sitio_existente_wms}</td>
+                            <td className="logistica-mono">{s.wms_nuevo}</td>
+                            <td>
+                              <div className="logistica-radio-group">
+                                <label className="logistica-radio-option">
+                                  <input
+                                    type="radio"
+                                    name={`decision-wms-${s.wms_nuevo}`}
+                                    checked={decisionesActualizarWms[s.wms_nuevo] !== 'mantener'}
+                                    onChange={() => setDecisionesActualizarWms(prev => ({ ...prev, [s.wms_nuevo]: 'actualizar' }))}
+                                  />
+                                  Actualizar WMS
+                                </label>
+                                <label className="logistica-radio-option">
+                                  <input
+                                    type="radio"
+                                    name={`decision-wms-${s.wms_nuevo}`}
+                                    checked={decisionesActualizarWms[s.wms_nuevo] === 'mantener'}
+                                    onChange={() => setDecisionesActualizarWms(prev => ({ ...prev, [s.wms_nuevo]: 'mantener' }))}
+                                  />
+                                  Mantener actual
+                                </label>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </ColapsableSection>
+              )}
+
+              {preview.sitiosConflictoNombre.length > 0 && (
+                <ColapsableSection title="Sitios con nombre diferente al existente" count={preview.sitiosConflictoNombre.length} accent="accent-red">
                   <div className="data-table-wrap">
                     <table className="data-table">
                       <thead>
                         <tr><th>Punto WMS</th><th>Nombre actual en BD</th><th>Nombre en Excel</th><th>Acción</th></tr>
                       </thead>
                       <tbody>
-                        {preview.sitiosConflictos.map(c => (
+                        {preview.sitiosConflictoNombre.map(c => (
                           <tr key={c.punto_wms}>
                             <td className="logistica-mono">{c.punto_wms}</td>
                             <td>{c.nombre_actual}</td>
