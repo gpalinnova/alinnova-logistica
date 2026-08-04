@@ -7,7 +7,7 @@ import Toast from '../../../../components/Toast'
 import { supabase } from '../../../../lib/supabase'
 import { todayLocalISO } from '../../../../lib/tablaWhatsappUtils'
 import { fmtFechaCorta } from '../../../../lib/logisticaRemisionPdf'
-import { generarPdfRuteros, calcularTotalCanastillas } from '../../../../lib/logisticaRuteroPdf'
+import { generarPdfRuteros, calcularTotalCanastillasFamilia } from '../../../../lib/logisticaRuteroPdf'
 
 const MODALIDAD_INFO = {
   panaderia: { label: 'Panadería', className: 'logistica-pill-panaderia' },
@@ -76,13 +76,16 @@ async function validarProductosSinCapacidad(fecha, modalidad) {
 async function cargarProductosDelDia(fecha, modalidad) {
   const { data, error } = await supabase
     .from('logistica_oc_detalle')
-    .select('producto:logistica_productos!inner(id, nombre, nombre_corto, capacidad_canastilla, modalidad)')
+    .select('producto:logistica_productos!inner(id, nombre, nombre_corto, capacidad_canastilla, modalidad, familia_producto)')
     .eq('fecha_entrega_efectiva', fecha)
     .eq('producto.modalidad', modalidad)
   if (error) throw error
   const map = new Map()
   for (const d of data || []) if (d.producto) map.set(d.producto.id, d.producto)
-  return Array.from(map.values()).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
+  return Array.from(map.values()).sort((a, b) =>
+    (a.familia_producto || '').localeCompare(b.familia_producto || '', 'es') ||
+    (a.nombre_corto || a.nombre || '').localeCompare(b.nombre_corto || b.nombre || '', 'es')
+  )
 }
 
 async function cargarLotesExistentes(fecha, modalidad) {
@@ -101,7 +104,7 @@ async function cargarConfirmacion(fecha, modalidad) {
   const [{ data: detalle, error: errDetalle }, { data: asignaciones, error: errAsig }] = await Promise.all([
     supabase
       .from('logistica_oc_detalle')
-      .select('sitio_id, cantidad, producto:logistica_productos!inner(id, nombre, nombre_corto, capacidad_canastilla, modalidad)')
+      .select('sitio_id, cantidad, producto:logistica_productos!inner(id, familia_producto, modalidad)')
       .eq('fecha_entrega_efectiva', fecha)
       .eq('producto.modalidad', modalidad),
     supabase
@@ -120,39 +123,69 @@ async function cargarConfirmacion(fecha, modalidad) {
     if (!d.producto) continue
     const ruta = rutaPorSitio.get(d.sitio_id)
     if (!ruta) continue
-    const key = `${ruta.id}|${d.producto.id}`
+    const familia = d.producto.familia_producto || 'SIN FAMILIA'
+    const key = `${ruta.id}|${familia}`
     if (!map.has(key)) {
-      map.set(key, { key, ruta, producto: d.producto, sitiosSet: new Set(), total_unidades: 0 })
+      map.set(key, { key, ruta, familia_producto: familia, sitiosSet: new Set(), productosSet: new Set(), total_unidades: 0 })
     }
     const row = map.get(key)
     row.sitiosSet.add(d.sitio_id)
+    row.productosSet.add(d.producto.id)
     row.total_unidades += d.cantidad
   }
 
   return Array.from(map.values())
-    .map(r => ({ key: r.key, ruta: r.ruta, producto: r.producto, total_sitios: r.sitiosSet.size, total_unidades: r.total_unidades }))
+    .map(r => ({
+      key: r.key,
+      ruta: r.ruta,
+      familia_producto: r.familia_producto,
+      total_sitios: r.sitiosSet.size,
+      num_variantes: r.productosSet.size,
+      total_unidades: r.total_unidades,
+    }))
     .sort((a, b) =>
       (a.ruta.nombre || '').localeCompare(b.ruta.nombre || '', 'es') ||
-      (a.producto.nombre || '').localeCompare(b.producto.nombre || '', 'es')
+      (a.familia_producto || '').localeCompare(b.familia_producto || '', 'es')
     )
 }
 
-async function cargarSitiosRutero(fecha, rutaId, productoId) {
-  const [{ data: detalle, error: errDetalle }, { data: asignaciones, error: errAsig }] = await Promise.all([
-    supabase.from('logistica_oc_detalle').select('sitio_id, cantidad').eq('fecha_entrega_efectiva', fecha).eq('producto_id', productoId),
-    supabase.from('logistica_sitio_ruta').select('sitio_id, orden_entrega').eq('ruta_id', rutaId),
-  ])
-  if (errDetalle) throw errDetalle
-  if (errAsig) throw errAsig
+async function cargarDatosRutero(fecha, modalidad, rutaId, familia) {
+  const { data: prodsData, error: errProd } = await supabase
+    .from('logistica_productos')
+    .select('id, nombre, nombre_corto, capacidad_canastilla, codigo_articulo, familia_producto')
+    .eq('modalidad', modalidad)
+    .eq('familia_producto', familia)
+  if (errProd) throw errProd
 
+  const idsFamilia = (prodsData || []).map(p => p.id)
+  const { data: detalle, error: errDetalle } = await supabase
+    .from('logistica_oc_detalle')
+    .select('sitio_id, producto_id, cantidad')
+    .eq('fecha_entrega_efectiva', fecha)
+    .in('producto_id', idsFamilia.length ? idsFamilia : ['00000000-0000-0000-0000-000000000000'])
+  if (errDetalle) throw errDetalle
+
+  const productoIdsConEntrega = new Set((detalle || []).map(d => d.producto_id))
+  const productos_variantes = (prodsData || [])
+    .filter(p => productoIdsConEntrega.has(p.id))
+    .sort((a, b) => (a.nombre_corto || a.nombre || '').localeCompare(b.nombre_corto || b.nombre || '', 'es'))
+
+  const { data: asignaciones, error: errAsig } = await supabase
+    .from('logistica_sitio_ruta')
+    .select('sitio_id, orden_entrega')
+    .eq('ruta_id', rutaId)
+  if (errAsig) throw errAsig
   const ordenPorSitio = new Map((asignaciones || []).map(a => [a.sitio_id, a.orden_entrega]))
-  const sumaPorSitio = new Map()
+
+  const cantidadesPorSitio = new Map()
   for (const d of detalle || []) {
     if (!ordenPorSitio.has(d.sitio_id)) continue
-    sumaPorSitio.set(d.sitio_id, (sumaPorSitio.get(d.sitio_id) || 0) + d.cantidad)
+    if (!cantidadesPorSitio.has(d.sitio_id)) cantidadesPorSitio.set(d.sitio_id, {})
+    const obj = cantidadesPorSitio.get(d.sitio_id)
+    obj[d.producto_id] = (obj[d.producto_id] || 0) + d.cantidad
   }
-  const sitioIds = Array.from(sumaPorSitio.keys())
-  if (sitioIds.length === 0) return []
+  const sitioIds = Array.from(cantidadesPorSitio.keys())
+  if (sitioIds.length === 0) return { sitios: [], productos_variantes }
 
   const { data: sitiosData, error: errSitios } = await supabase
     .from('logistica_sitios')
@@ -161,14 +194,16 @@ async function cargarSitiosRutero(fecha, rutaId, productoId) {
   if (errSitios) throw errSitios
   const sitiosById = new Map((sitiosData || []).map(s => [s.id, s]))
 
-  return sitioIds
-    .map(id => ({ ...sitiosById.get(id), unidades: sumaPorSitio.get(id), orden: ordenPorSitio.get(id) }))
+  const sitios = sitioIds
+    .map(id => ({ ...sitiosById.get(id), cantidades: cantidadesPorSitio.get(id), orden: ordenPorSitio.get(id) }))
     .sort((a, b) => {
       if (a.orden != null && b.orden != null) return a.orden - b.orden
       if (a.orden != null) return -1
       if (b.orden != null) return 1
       return (a.punto_wms || 0) - (b.punto_wms || 0)
     })
+
+  return { sitios, productos_variantes }
 }
 
 export default function RuterosPage() {
@@ -251,6 +286,16 @@ export default function RuterosPage() {
     }
   }
 
+  const productosPorFamilia = useMemo(() => {
+    const map = new Map()
+    for (const p of productos) {
+      const fam = p.familia_producto || 'SIN FAMILIA'
+      if (!map.has(fam)) map.set(fam, [])
+      map.get(fam).push(p)
+    }
+    return Array.from(map.entries())
+  }, [productos])
+
   function actualizarLoteLocal(productoId, campo, valor) {
     setLotesPorProducto(prev => {
       const next = new Map(prev)
@@ -312,9 +357,9 @@ export default function RuterosPage() {
   const resumenConfirmacion = useMemo(() => {
     const seleccionadas = confirmacionRows.filter(r => selectedKeys.has(r.key))
     const rutas = new Set(seleccionadas.map(r => r.ruta.id))
-    const prods = new Set(seleccionadas.map(r => r.producto.id))
+    const totalSitios = seleccionadas.reduce((s, r) => s + r.total_sitios, 0)
     const unidades = seleccionadas.reduce((s, r) => s + r.total_unidades, 0)
-    return { totalRuteros: seleccionadas.length, rutasCount: rutas.size, productosCount: prods.size, totalUnidades: unidades }
+    return { totalRuteros: seleccionadas.length, rutasCount: rutas.size, totalSitios, totalUnidades: unidades }
   }, [confirmacionRows, selectedKeys])
 
   async function handleGenerar() {
@@ -325,19 +370,21 @@ export default function RuterosPage() {
     try {
       const ruteros = []
       for (const combo of seleccionadas) {
-        const sitios = await cargarSitiosRutero(fecha, combo.ruta.id, combo.producto.id)
-        const capacidad = combo.producto.capacidad_canastilla
-        const totales = calcularTotalCanastillas(sitios.map(s => ({ unidades: s.unidades, capacidad })))
-        const loteInfo = lotesPorProducto.get(combo.producto.id) || {}
+        const { sitios, productos_variantes } = await cargarDatosRutero(fecha, modalidad, combo.ruta.id, combo.familia_producto)
+        const lotes_venc = {}
+        for (const p of productos_variantes) {
+          const info = lotesPorProducto.get(p.id)
+          if (info) lotes_venc[p.id] = info
+        }
+        const totales = calcularTotalCanastillasFamilia(sitios, productos_variantes)
         ruteros.push({
           ruta: combo.ruta,
-          producto: combo.producto,
+          familia: combo.familia_producto,
           fechaEntrega: fmtFechaCorta(fecha),
           fechaGeneracion: fmtFechaCorta(todayLocalISO()),
           sitios,
-          capacidad,
-          lote: loteInfo.lote || '',
-          fecha_vencimiento: loteInfo.fecha_vencimiento || null,
+          productos_variantes,
+          lotes_venc,
           _totales: totales,
         })
       }
@@ -345,13 +392,11 @@ export default function RuterosPage() {
       const rowsInsert = ruteros.map(r => ({
         fecha_entrega_efectiva: fecha,
         ruta_id: r.ruta.id,
-        producto_id: r.producto.id,
+        familia_producto: r.familia,
         modalidad,
         total_unidades: r._totales.total_unidades,
         total_canastillas: r._totales.total_canastillas,
         total_sitios: r.sitios.length,
-        lote: r.lote || null,
-        fecha_vencimiento: r.fecha_vencimiento || null,
       }))
       const { error: errInsert } = await supabase.from('logistica_ruteros').insert(rowsInsert)
       if (errInsert) throw errInsert
@@ -381,13 +426,13 @@ export default function RuterosPage() {
     if (resultados.length >= 5) {
       const zip = new JSZip()
       resultados.forEach(r => {
-        zip.file(`rutero_${slug(r.ruta.nombre)}_${slug(r.producto.nombre_corto || r.producto.nombre)}_${fecha}.pdf`, r.blob)
+        zip.file(`rutero_${slug(r.ruta.nombre)}_${slug(r.familia)}_${fecha}.pdf`, r.blob)
       })
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       descargarBlob(zipBlob, `ruteros_${fecha}.zip`)
     } else {
       resultados.forEach(r => {
-        descargarBlob(r.blob, `rutero_${slug(r.ruta.nombre)}_${slug(r.producto.nombre_corto || r.producto.nombre)}_${fecha}.pdf`)
+        descargarBlob(r.blob, `rutero_${slug(r.ruta.nombre)}_${slug(r.familia)}_${fecha}.pdf`)
       })
     }
   }
@@ -409,7 +454,7 @@ export default function RuterosPage() {
   return (
     <div className="app-layout">
       <main className="main-content">
-        <PageHeader backHref="/logistica/operaciones" backLabel="Volver" title="📋 Ruteros — Logística" subtitle="Generación de ruteros PDF por ruta y producto" />
+        <PageHeader backHref="/logistica/operaciones" backLabel="Volver" title="📋 Ruteros — Logística" subtitle="Generación de ruteros PDF por ruta y familia de producto" />
         <div className="page-content">
           {errorMsg && <div className="form-error-banner">{errorMsg}</div>}
 
@@ -493,30 +538,35 @@ export default function RuterosPage() {
                     <tr><th>Producto</th><th>Capacidad canastilla</th><th>Lote</th><th>Fecha vencimiento</th></tr>
                   </thead>
                   <tbody>
-                    {productos.map(p => {
-                      const l = lotesPorProducto.get(p.id) || { lote: '', fecha_vencimiento: '' }
-                      return (
-                        <tr key={p.id}>
-                          <td>{p.nombre_corto || p.nombre}</td>
-                          <td className="logistica-mono" style={{ textAlign: 'center' }}>{p.capacidad_canastilla}</td>
-                          <td>
-                            <input
-                              type="text"
-                              value={l.lote}
-                              placeholder="Sin definir"
-                              onChange={e => actualizarLoteLocal(p.id, 'lote', e.target.value)}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="date"
-                              value={l.fecha_vencimiento || ''}
-                              onChange={e => actualizarLoteLocal(p.id, 'fecha_vencimiento', e.target.value)}
-                            />
-                          </td>
-                        </tr>
-                      )
-                    })}
+                    {productosPorFamilia.flatMap(([familia, prods]) => ([
+                      <tr key={`fam-${familia}`}>
+                        <td colSpan={4}><span className="logistica-pill logistica-pill-familia">{familia}</span></td>
+                      </tr>,
+                      ...prods.map(p => {
+                        const l = lotesPorProducto.get(p.id) || { lote: '', fecha_vencimiento: '' }
+                        return (
+                          <tr key={p.id}>
+                            <td>{p.nombre_corto || p.nombre}</td>
+                            <td className="logistica-mono" style={{ textAlign: 'center' }}>{p.capacidad_canastilla}</td>
+                            <td>
+                              <input
+                                type="text"
+                                value={l.lote}
+                                placeholder="Sin definir"
+                                onChange={e => actualizarLoteLocal(p.id, 'lote', e.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="date"
+                                value={l.fecha_vencimiento || ''}
+                                onChange={e => actualizarLoteLocal(p.id, 'fecha_vencimiento', e.target.value)}
+                              />
+                            </td>
+                          </tr>
+                        )
+                      }),
+                    ]))}
                   </tbody>
                 </table>
               </div>
@@ -539,23 +589,23 @@ export default function RuterosPage() {
                   <div className="rem-stat-label">Ruteros a generar</div>
                 </div>
                 <div className="rem-stat-card">
-                  <div className="rem-stat-num">{resumenConfirmacion.rutasCount}</div>
-                  <div className="rem-stat-label">Rutas involucradas</div>
-                </div>
-                <div className="rem-stat-card">
-                  <div className="rem-stat-num">{resumenConfirmacion.productosCount}</div>
-                  <div className="rem-stat-label">Productos únicos</div>
+                  <div className="rem-stat-num">{resumenConfirmacion.totalSitios}</div>
+                  <div className="rem-stat-label">Total sitios</div>
                 </div>
                 <div className="rem-stat-card">
                   <div className="rem-stat-num">{resumenConfirmacion.totalUnidades.toLocaleString('es-CO')}</div>
                   <div className="rem-stat-label">Unidades totales</div>
+                </div>
+                <div className="rem-stat-card">
+                  <div className="rem-stat-num">{resumenConfirmacion.rutasCount}</div>
+                  <div className="rem-stat-label">Rutas distintas</div>
                 </div>
               </div>
 
               <div className="logistica-radio-group">
                 <label className="logistica-radio-option">
                   <input type="radio" name="modo" checked={modo === 'individual'} onChange={() => setModo('individual')} />
-                  Un PDF por (ruta × producto)
+                  Un PDF por (ruta × familia)
                 </label>
                 <label className="logistica-radio-option">
                   <input type="radio" name="modo" checked={modo === 'agrupado_por_ruta'} onChange={() => setModo('agrupado_por_ruta')} />
@@ -577,32 +627,23 @@ export default function RuterosPage() {
                     <tr>
                       <th><input type="checkbox" checked={todasSeleccionadas} onChange={toggleTodas} /></th>
                       <th>Ruta</th>
-                      <th>Producto</th>
+                      <th>Familia producto</th>
                       <th>Sitios</th>
                       <th>Unidades</th>
-                      <th>Canastillas estimadas</th>
-                      <th>Lote asignado</th>
-                      <th>Vencimiento asignado</th>
+                      <th>Variantes</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {confirmacionRows.map(r => {
-                      const loteInfo = lotesPorProducto.get(r.producto.id) || {}
-                      const cap = r.producto.capacidad_canastilla || 0
-                      const canastillasEstimadas = cap > 0 ? Math.ceil(r.total_unidades / cap) : 0
-                      return (
-                        <tr key={r.key}>
-                          <td><input type="checkbox" checked={selectedKeys.has(r.key)} onChange={() => toggleUna(r.key)} /></td>
-                          <td>{r.ruta.nombre}</td>
-                          <td>{r.producto.nombre_corto || r.producto.nombre}</td>
-                          <td style={{ textAlign: 'center' }}>{r.total_sitios}</td>
-                          <td className="logistica-mono" style={{ textAlign: 'right' }}>{r.total_unidades.toLocaleString('es-CO')}</td>
-                          <td className="logistica-mono" style={{ textAlign: 'right' }}>{canastillasEstimadas.toLocaleString('es-CO')}</td>
-                          <td>{loteInfo.lote || <span className="logistica-muted">Sin definir</span>}</td>
-                          <td>{loteInfo.fecha_vencimiento ? fmtFechaCorta(loteInfo.fecha_vencimiento) : <span className="logistica-muted">Sin definir</span>}</td>
-                        </tr>
-                      )
-                    })}
+                    {confirmacionRows.map(r => (
+                      <tr key={r.key}>
+                        <td><input type="checkbox" checked={selectedKeys.has(r.key)} onChange={() => toggleUna(r.key)} /></td>
+                        <td>{r.ruta.nombre}</td>
+                        <td>{r.familia_producto}</td>
+                        <td style={{ textAlign: 'center' }}>{r.total_sitios}</td>
+                        <td className="logistica-mono" style={{ textAlign: 'right' }}>{r.total_unidades.toLocaleString('es-CO')}</td>
+                        <td style={{ textAlign: 'center' }}>{r.num_variantes} productos</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
