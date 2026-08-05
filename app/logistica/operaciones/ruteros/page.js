@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import JSZip from 'jszip'
 import PageHeader from '../../../../components/PageHeader'
 import Toast from '../../../../components/Toast'
 import { supabase } from '../../../../lib/supabase'
@@ -13,14 +12,6 @@ const MODALIDAD_INFO = {
   panaderia: { label: 'Panadería', className: 'logistica-pill-panaderia' },
   am_pm: { label: 'AM-PM', className: 'logistica-pill-ampm' },
   gastronomia: { label: 'Gastronomía', className: 'logistica-pill-gastronomia' },
-}
-
-function slug(s) {
-  return String(s || '')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toUpperCase() || 'SN'
 }
 
 function descargarBlob(blob, filename) {
@@ -222,7 +213,6 @@ export default function RuterosPage() {
 
   const [confirmacionRows, setConfirmacionRows] = useState([])
   const [selectedKeys, setSelectedKeys] = useState(new Set())
-  const [modo, setModo] = useState('agrupado_por_ruta')
 
   const [errorMsg, setErrorMsg] = useState('')
   const [resumenExito, setResumenExito] = useState(null)
@@ -401,8 +391,8 @@ export default function RuterosPage() {
       const { error: errInsert } = await supabase.from('logistica_ruteros').insert(rowsInsert)
       if (errInsert) throw errInsert
 
-      const resultados = generarPdfRuteros(ruteros, modo)
-      await descargarResultados(resultados, modo)
+      const blob = generarPdfRuteros(ruteros)
+      descargarBlob(blob, `ruteros_logistica_${fecha}_${modalidad}.pdf`)
 
       setResumenExito({
         cantidad: ruteros.length,
@@ -415,25 +405,6 @@ export default function RuterosPage() {
     } catch (err) {
       setErrorMsg('No se pudieron generar los ruteros.')
       setEstado('ERROR')
-    }
-  }
-
-  async function descargarResultados(resultados, modoActual) {
-    if (modoActual === 'agrupado_por_ruta') {
-      resultados.forEach(r => descargarBlob(r.blob, `ruteros_${slug(r.ruta.nombre)}_${fecha}.pdf`))
-      return
-    }
-    if (resultados.length >= 5) {
-      const zip = new JSZip()
-      resultados.forEach(r => {
-        zip.file(`rutero_${slug(r.ruta.nombre)}_${slug(r.familia)}_${fecha}.pdf`, r.blob)
-      })
-      const zipBlob = await zip.generateAsync({ type: 'blob' })
-      descargarBlob(zipBlob, `ruteros_${fecha}.zip`)
-    } else {
-      resultados.forEach(r => {
-        descargarBlob(r.blob, `rutero_${slug(r.ruta.nombre)}_${slug(r.familia)}_${fecha}.pdf`)
-      })
     }
   }
 
@@ -600,17 +571,6 @@ export default function RuterosPage() {
                   <div className="rem-stat-num">{resumenConfirmacion.rutasCount}</div>
                   <div className="rem-stat-label">Rutas distintas</div>
                 </div>
-              </div>
-
-              <div className="logistica-radio-group">
-                <label className="logistica-radio-option">
-                  <input type="radio" name="modo" checked={modo === 'individual'} onChange={() => setModo('individual')} />
-                  Un PDF por (ruta × familia)
-                </label>
-                <label className="logistica-radio-option">
-                  <input type="radio" name="modo" checked={modo === 'agrupado_por_ruta'} onChange={() => setModo('agrupado_por_ruta')} />
-                  Agrupar por ruta (default)
-                </label>
               </div>
 
               <div className="page-toolbar spread">
