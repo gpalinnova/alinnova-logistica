@@ -2520,3 +2520,187 @@ button.nav-card {
   padding: 14px 0;
   margin-bottom: 6px;
 }
+
+/* ── Progreso de la ruta (Fase 2) ── */
+.entregas-progreso {
+  margin: 16px 0 18px;
+}
+
+.entregas-progreso-texto {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #3D1F3D;
+  margin-bottom: 6px;
+}
+
+.entregas-progreso-bar {
+  height: 10px;
+  border-radius: 6px;
+  background: #eee7ee;
+  overflow: hidden;
+}
+
+.entregas-progreso-bar-fill {
+  height: 100%;
+  background: #25D366;
+  border-radius: 6px;
+  transition: width 0.25s;
+}
+
+/* ── Lista de colegios (tarjetas) ── */
+.entregas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.entregas-card {
+  border: 1px solid rgba(61,31,61,0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #faf9fb;
+}
+
+.entregas-card-entregado {
+  background: #f0faf4;
+  border-color: rgba(37,211,102,0.35);
+}
+
+.entregas-card-nombre {
+  font-weight: 800;
+  color: #3D1F3D;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.entregas-card-meta {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.entregas-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.entregas-card-estado {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.entregas-card-estado-ok {
+  color: #128C4A;
+}
+
+.entregas-card-btn {
+  min-height: 44px;
+  padding: 10px 18px;
+}
+
+/* ── Formulario de registro por colegio ── */
+.entregas-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(61,31,61,0.15);
+  display: flex;
+  flex-direction: column;
+}
+
+.entregas-form input,
+.entregas-form select,
+.entregas-form textarea {
+  font-size: 16px;
+  min-height: 44px;
+}
+
+.entregas-form textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.entregas-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.entregas-toggle-btn {
+  flex: 1;
+  min-height: 44px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.entregas-toggle-btn-active {
+  background: #3D1F3D;
+  border-color: #3D1F3D;
+  color: #fff;
+}
+
+.entregas-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.entregas-form-btn {
+  flex: 1;
+  min-height: 44px;
+}
+
+.entregas-form-btn-wide {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+}
+
+.btn-whatsapp {
+  background: #25D366;
+  color: #04250f;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.btn-whatsapp:hover {
+  background: #1fb955;
+}
+
+.btn-whatsapp:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Ruta completada ── */
+.entregas-completada {
+  margin-top: 18px;
+  text-align: center;
+  padding: 20px 16px;
+  border-radius: 12px;
+  background: #f0faf4;
+  border: 1px solid rgba(37,211,102,0.35);
+}
+
+.entregas-completada-emoji {
+  font-size: 2rem;
+  margin-bottom: 6px;
+}
+
+.entregas-completada-texto {
+  font-weight: 800;
+  color: #128C4A;
+  margin-bottom: 14px;
+}
