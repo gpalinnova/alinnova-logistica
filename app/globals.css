@@ -2415,6 +2415,43 @@ button.nav-card {
   text-align: left;
 }
 
+/* ── Registro de entregas: reporte consolidado (PDF del día) ── */
+.registro-reporte-block {
+  border: 1px solid rgba(61,31,61,0.1);
+  border-radius: 10px;
+  padding: 14px;
+  background: #faf9fb;
+  margin-bottom: 18px;
+}
+
+.registro-reporte-titulo {
+  font-weight: 700;
+  color: #3D1F3D;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 10px;
+}
+
+.registro-reporte-btn {
+  width: 100%;
+  padding: 14px;
+}
+
+.registro-reporte-contador {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.registro-reporte-aviso {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #92400e;
+  text-align: center;
+}
+
 /* ── Registro de entregas: lista de links por conductor ── */
 .registro-links-list {
   display: flex;

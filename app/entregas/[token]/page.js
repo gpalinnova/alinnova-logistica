@@ -1,6 +1,7 @@
 import { supabase } from '../../../lib/supabase'
 import { todayLocalISO, formatFechaDiaMes } from '../../../lib/tablaWhatsappUtils'
 import ListaColegios from '../../../components/entregas/ListaColegios'
+import ResumenDiaButton from '../../../components/entregas/ResumenDiaButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -132,9 +133,7 @@ export default async function EntregaTokenPage({ params }) {
               <div className="entregas-completada">
                 <div className="entregas-completada-emoji">🎉</div>
                 <div className="entregas-completada-texto">Ruta completada</div>
-                <button type="button" className="btn-primary entregas-form-btn-wide" disabled>
-                  📤 Enviar resumen del día al grupo
-                </button>
+                <ResumenDiaButton colegios={colegios} conductor={repartidor.conductor} fecha={fecha} />
               </div>
             )}
           </>
