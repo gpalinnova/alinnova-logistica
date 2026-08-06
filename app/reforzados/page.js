@@ -1,5 +1,9 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import PageHeader from '../../components/PageHeader'
+import RegistroEntregasModal from '../../components/RegistroEntregasModal'
 
 const DATA_MAESTRA = [
   { href: '/reforzados/productos', icon: '📦', title: 'Productos', desc: 'Productos y embalaje', accent: 'accent-blue' },
@@ -16,17 +20,33 @@ const OPERACIONES_DEL_DIA = [
   { href: '/reforzados/rutero', icon: '📋', title: 'Rutero', desc: 'PDF de cargue por conductor', accent: 'accent-orange' },
 ]
 
-function NavCard({ href, icon, title, desc, accent }) {
-  return (
-    <Link href={href} className={`nav-card ${accent}`}>
+function NavCard({ href, icon, title, desc, accent, onClick }) {
+  const content = (
+    <>
       <div className="nav-card-icon">{icon}</div>
       <div className="nav-card-title">{title}</div>
       <div className="nav-card-desc">{desc}</div>
+    </>
+  )
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={`nav-card ${accent}`}>
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <Link href={href} className={`nav-card ${accent}`}>
+      {content}
     </Link>
   )
 }
 
 export default function ReforzadosPage() {
+  const [registroModalOpen, setRegistroModalOpen] = useState(false)
+
   return (
     <div className="app-layout">
       <main className="main-content">
@@ -40,9 +60,18 @@ export default function ReforzadosPage() {
           <div className="section-label">⚙️ Operaciones del Día</div>
           <div className="nav-grid">
             {OPERACIONES_DEL_DIA.map(item => <NavCard key={item.href} {...item} />)}
+            <NavCard
+              icon="📋"
+              title="Registro de entregas"
+              desc="Links para que los conductores registren cada entrega"
+              accent="accent-purple"
+              onClick={() => setRegistroModalOpen(true)}
+            />
           </div>
         </div>
       </main>
+
+      {registroModalOpen && <RegistroEntregasModal onClose={() => setRegistroModalOpen(false)} />}
     </div>
   )
 }
