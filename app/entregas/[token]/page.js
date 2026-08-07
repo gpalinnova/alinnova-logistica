@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/supabase'
-import { todayLocalISO, formatFechaDiaMes } from '../../../lib/tablaWhatsappUtils'
+import { todayLocalISO, formatFechaDiaMes, formatFechaLargaSinComa } from '../../../lib/tablaWhatsappUtils'
 import { getRepartidoresActivosFecha } from '../../../lib/registroEntregasCalc'
 import EntregasClient from '../../../components/entregas/EntregasClient'
 
@@ -70,11 +70,20 @@ export default async function EntregaTokenPage({ params }) {
           <p>Hoy · {formatFechaDiaMes(fecha)}</p>
         </div>
 
-        <EntregasClient
-          fecha={fecha}
-          conductores={conductores}
-          colegiosPorConductor={colegiosPorConductor}
-        />
+        {conductores.length === 0 ? (
+          <div className="registro-vacio-dia">
+            <div className="registro-vacio-emoji">📭</div>
+            <div className="registro-vacio-titulo">Hoy no hay entregas planeadas</div>
+            <div className="registro-vacio-subtitulo">{formatFechaLargaSinComa(fecha)}</div>
+            <div className="registro-vacio-nota">Este link mostrará automáticamente tus entregas el próximo día operativo.</div>
+          </div>
+        ) : (
+          <EntregasClient
+            fecha={fecha}
+            conductores={conductores}
+            colegiosPorConductor={colegiosPorConductor}
+          />
+        )}
       </div>
     </div>
   )

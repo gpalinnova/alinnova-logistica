@@ -2486,6 +2486,36 @@ button.nav-card {
   margin-bottom: 8px;
 }
 
+/* ── Registro de entregas: sin entregas planeadas hoy ── */
+.registro-vacio-dia {
+  text-align: center;
+  padding: 36px 16px 24px;
+}
+
+.registro-vacio-emoji {
+  font-size: 2.6rem;
+  margin-bottom: 12px;
+}
+
+.registro-vacio-titulo {
+  font-weight: 800;
+  color: #3D1F3D;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.registro-vacio-subtitulo {
+  font-size: 0.9rem;
+  color: #6b7280;
+  text-transform: capitalize;
+  margin-bottom: 16px;
+}
+
+.registro-vacio-nota {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
 /* ── Registro de entregas: página pública, selector de conductor ── */
 .registro-selector-conductor {
   padding: 8px 0 4px;

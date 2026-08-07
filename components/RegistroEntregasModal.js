@@ -138,28 +138,30 @@ export default function RegistroEntregasModal({ onClose }) {
 
         <div className="registro-reporte-block">
           <div className="registro-reporte-titulo">Reporte consolidado por conductor</div>
-          <div className="registro-reporte-contador">
-            {reporte.totalEntregas} entrega{reporte.totalEntregas === 1 ? '' : 's'} registrada{reporte.totalEntregas === 1 ? '' : 's'} · {reporte.totalConductoresActivos} conductor{reporte.totalConductoresActivos === 1 ? '' : 'es'} activo{reporte.totalConductoresActivos === 1 ? '' : 's'}
-          </div>
 
           {reporte.loading ? (
             <div className="empty-state"><p>Cargando reporte...</p></div>
-          ) : reporte.conductores.length === 0 ? (
-            <div className="registro-reporte-aviso">Aún no hay entregas registradas para esta fecha</div>
+          ) : reporte.totalConductoresActivos === 0 ? (
+            <div className="registro-reporte-aviso">📭 No hay rutas planeadas para esta fecha</div>
           ) : (
-            <div className="registro-conductores-list">
-              {reporte.conductores.map(c => (
-                <div key={c.repartidorId} className="registro-conductor-item">
-                  <div className="registro-conductor-info">
-                    <div className="registro-link-conductor">{c.conductor}</div>
-                    <div className="registro-link-placa">{c.entregados} de {c.total} entregas</div>
+            <>
+              <div className="registro-reporte-contador">
+                {reporte.totalEntregas} entrega{reporte.totalEntregas === 1 ? '' : 's'} registrada{reporte.totalEntregas === 1 ? '' : 's'} · {reporte.totalConductoresActivos} conductor{reporte.totalConductoresActivos === 1 ? '' : 'es'} activo{reporte.totalConductoresActivos === 1 ? '' : 's'}
+              </div>
+              <div className="registro-conductores-list">
+                {reporte.conductores.map(c => (
+                  <div key={c.repartidorId} className="registro-conductor-item">
+                    <div className="registro-conductor-info">
+                      <div className="registro-link-conductor">{c.conductor}</div>
+                      <div className="registro-link-placa">{c.entregados} de {c.total} entregas</div>
+                    </div>
+                    <div className="entregas-progreso-bar">
+                      <div className="entregas-progreso-bar-fill" style={{ width: `${c.pct}%` }} />
+                    </div>
                   </div>
-                  <div className="entregas-progreso-bar">
-                    <div className="entregas-progreso-bar-fill" style={{ width: `${c.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
 
           <button

@@ -47,10 +47,6 @@ export default function EntregasClient({ fecha, conductores, colegiosPorConducto
     } catch {}
   }
 
-  if (conductores.length === 0) {
-    return <div className="empty-state"><p>No hay conductores con ruta asignada hoy.</p></div>
-  }
-
   if (!seleccionado) {
     return (
       <div className="registro-selector-conductor">
