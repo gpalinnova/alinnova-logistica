@@ -1,83 +1,90 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { todayLocalISO, formatFechaLarga } from '../lib/tablaWhatsappUtils'
-import { getLinksRegistroEntregas } from '../lib/entregasActions'
-import { fetchRegistroEntregasConductores } from '../lib/registroEntregasCalc'
+import { todayLocalISO } from '../lib/tablaWhatsappUtils'
+import { getRegistroUniversal, regenerarRegistroUniversalAction } from '../lib/entregasActions'
+import { fetchReporteConductoresDia, fetchRegistroEntregasConductores } from '../lib/registroEntregasCalc'
 import { generateRegistroEntregasPDF } from '../lib/registroEntregasPdf'
 
 export default function RegistroEntregasModal({ onClose }) {
-  const [selectedDate, setSelectedDate] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [link, setLink] = useState(null)
+  const [loadingLink, setLoadingLink] = useState(true)
+  const [regenerando, setRegenerando] = useState(false)
+  const [copiado, setCopiado] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-  const [rutaActiva, setRutaActiva] = useState(true)
-  const [links, setLinks] = useState([])
-  const [copiedId, setCopiedId] = useState(null)
-  const [reporte, setReporte] = useState({ loading: true, conductores: [] })
+
+  const [selectedDate, setSelectedDate] = useState(todayLocalISO())
+  const [reporte, setReporte] = useState({ loading: true, conductores: [], totalEntregas: 0, totalConductoresActivos: 0 })
   const [generandoPdf, setGenerandoPdf] = useState(false)
 
   useEffect(() => {
-    async function fetchDefaultDate() {
-      const { data } = await supabase
-        .from('reforzados_base_suministro')
-        .select('fecha')
-        .order('fecha', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      setSelectedDate(data?.fecha || todayLocalISO())
+    let active = true
+    async function fetchLink() {
+      setLoadingLink(true)
+      try {
+        const result = await getRegistroUniversal()
+        if (!active) return
+        setLink(result)
+      } catch (err) {
+        if (!active) return
+        setErrorMsg('No se pudo cargar el link universal.')
+      } finally {
+        if (active) setLoadingLink(false)
+      }
     }
-    fetchDefaultDate()
+    fetchLink()
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
-    if (!selectedDate) return
-    let active = true
-    async function fetchLinks() {
-      setLoading(true)
-      setErrorMsg('')
-      try {
-        const result = await getLinksRegistroEntregas(selectedDate)
-        if (!active) return
-        setRutaActiva(result.rutaActiva)
-        setLinks(result.links)
-      } catch (err) {
-        if (!active) return
-        setErrorMsg('No se pudieron generar los links de registro.')
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    fetchLinks()
-    return () => { active = false }
-  }, [selectedDate])
-
-  useEffect(() => {
-    if (!selectedDate) return
     let active = true
     async function fetchReporte() {
       setReporte(r => ({ ...r, loading: true }))
       try {
-        const conductores = await fetchRegistroEntregasConductores(selectedDate)
+        const data = await fetchReporteConductoresDia(selectedDate)
         if (!active) return
-        setReporte({ loading: false, conductores })
+        setReporte({ loading: false, ...data })
       } catch (err) {
         if (!active) return
-        setReporte({ loading: false, conductores: [] })
+        setReporte({ loading: false, conductores: [], totalEntregas: 0, totalConductoresActivos: 0 })
       }
     }
     fetchReporte()
     return () => { active = false }
   }, [selectedDate])
 
-  const totalEntregas = reporte.conductores.reduce((s, c) => s + c.filas.length, 0)
-  const totalRutasActivas = reporte.conductores.length
+  const handleCopy = useCallback(async () => {
+    if (!link?.url) return
+    try {
+      await navigator.clipboard.writeText(link.url)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch (err) {
+      setErrorMsg('No se pudo copiar el link. Copia manualmente desde el campo.')
+    }
+  }, [link])
 
-  function handleDownloadPdf() {
-    if (totalEntregas === 0 || generandoPdf) return
+  async function handleRegenerar() {
+    const confirmado = window.confirm('Esto invalidará el link actual. Los conductores necesitarán el nuevo. ¿Continuar?')
+    if (!confirmado) return
+    setRegenerando(true)
+    setErrorMsg('')
+    try {
+      const nuevo = await regenerarRegistroUniversalAction()
+      setLink(nuevo)
+    } catch (err) {
+      setErrorMsg('No se pudo regenerar el link.')
+    } finally {
+      setRegenerando(false)
+    }
+  }
+
+  async function handleDownloadPdf() {
+    if (reporte.totalEntregas === 0 || generandoPdf) return
     setGenerandoPdf(true)
     try {
-      const { doc } = generateRegistroEntregasPDF(reporte.conductores, { fechaISO: selectedDate })
+      const conductoresDetalle = await fetchRegistroEntregasConductores(selectedDate)
+      const { doc } = generateRegistroEntregasPDF(conductoresDetalle, { fechaISO: selectedDate })
       doc.save(`registro_entregas_${selectedDate}.pdf`)
     } catch (err) {
       setErrorMsg('No se pudo generar el PDF del reporte.')
@@ -86,87 +93,84 @@ export default function RegistroEntregasModal({ onClose }) {
     }
   }
 
-  const handleCopy = useCallback(async (url, id) => {
-    if (!url) return
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopiedId(id)
-      setTimeout(() => setCopiedId(current => (current === id ? null : current)), 2000)
-    } catch (err) {
-      setErrorMsg('No se pudo copiar el link. Copia manualmente desde el campo.')
-    }
-  }, [])
-
-  const fechaDisplay = selectedDate ? formatFechaLarga(selectedDate) : ''
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box-lg" onClick={e => e.stopPropagation()}>
-        <div className="modal-title">Links de registro para el día {fechaDisplay}</div>
+        <div className="modal-title">Registro de entregas</div>
+
+        {errorMsg && <div className="form-error-banner">{errorMsg}</div>}
+
+        <div className="registro-reporte-block">
+          <div className="registro-reporte-titulo">Link universal para conductores</div>
+          {loadingLink ? (
+            <div className="empty-state"><p>Cargando link...</p></div>
+          ) : !link ? (
+            <div className="rt-status-card">
+              <div className="rt-status-card-emoji">⚠️</div>
+              <div className="rt-status-card-text">No hay link universal activo</div>
+            </div>
+          ) : (
+            <>
+              <div className="registro-link-url-row">
+                <input type="text" className="registro-link-url" value={link.url} readOnly />
+              </div>
+              <div className="registro-universal-actions">
+                <button type="button" className="btn-secondary" onClick={handleCopy}>
+                  {copiado ? '✅ Copiado' : '📋 Copiar link'}
+                </button>
+                <button type="button" className="btn-secondary" onClick={handleRegenerar} disabled={regenerando}>
+                  {regenerando ? 'Regenerando...' : '🔄 Regenerar link'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="form-group">
-          <label htmlFor="reg-entregas-fecha">Fecha de entrega</label>
+          <label htmlFor="reg-entregas-fecha">Reporte del día</label>
           <input
             id="reg-entregas-fecha"
             type="date"
-            value={selectedDate || ''}
+            value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
           />
         </div>
 
         <div className="registro-reporte-block">
-          <div className="registro-reporte-titulo">Reporte consolidado</div>
+          <div className="registro-reporte-titulo">Reporte consolidado por conductor</div>
+          <div className="registro-reporte-contador">
+            {reporte.totalEntregas} entrega{reporte.totalEntregas === 1 ? '' : 's'} registrada{reporte.totalEntregas === 1 ? '' : 's'} · {reporte.totalConductoresActivos} conductor{reporte.totalConductoresActivos === 1 ? '' : 'es'} activo{reporte.totalConductoresActivos === 1 ? '' : 's'}
+          </div>
+
+          {reporte.loading ? (
+            <div className="empty-state"><p>Cargando reporte...</p></div>
+          ) : reporte.conductores.length === 0 ? (
+            <div className="registro-reporte-aviso">Aún no hay entregas registradas para esta fecha</div>
+          ) : (
+            <div className="registro-conductores-list">
+              {reporte.conductores.map(c => (
+                <div key={c.repartidorId} className="registro-conductor-item">
+                  <div className="registro-conductor-info">
+                    <div className="registro-link-conductor">{c.conductor}</div>
+                    <div className="registro-link-placa">{c.entregados} de {c.total} entregas</div>
+                  </div>
+                  <div className="entregas-progreso-bar">
+                    <div className="entregas-progreso-bar-fill" style={{ width: `${c.pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <button
             type="button"
             className="btn-generate-pdf registro-reporte-btn"
             onClick={handleDownloadPdf}
-            disabled={reporte.loading || totalEntregas === 0 || generandoPdf}
+            disabled={reporte.loading || reporte.totalEntregas === 0 || generandoPdf}
           >
             {generandoPdf ? 'Generando PDF...' : '📄 Descargar PDF del día'}
           </button>
-          {!reporte.loading && totalEntregas === 0 ? (
-            <div className="registro-reporte-aviso">Aún no hay entregas registradas hoy</div>
-          ) : (
-            <div className="registro-reporte-contador">
-              {totalEntregas} entrega{totalEntregas === 1 ? '' : 's'} registrada{totalEntregas === 1 ? '' : 's'} · {totalRutasActivas} ruta{totalRutasActivas === 1 ? '' : 's'} activa{totalRutasActivas === 1 ? '' : 's'}
-            </div>
-          )}
         </div>
-
-        {loading ? (
-          <div className="empty-state"><p>Generando links...</p></div>
-        ) : errorMsg ? (
-          <div className="form-error-banner">{errorMsg}</div>
-        ) : !rutaActiva ? (
-          <div className="rt-status-card">
-            <div className="rt-status-card-emoji">⚠️</div>
-            <div className="rt-status-card-text">No hay ruta activa</div>
-          </div>
-        ) : links.length === 0 ? (
-          <div className="empty-state"><p>No hay conductores con entregas para esta fecha.</p></div>
-        ) : (
-          <div className="registro-links-list">
-            {links.map(l => (
-              <div key={l.repartidorId} className="registro-link-item">
-                <div className="registro-link-info">
-                  <div className="registro-link-conductor">{l.conductor}</div>
-                  <div className="registro-link-placa">{l.placa}{l.auxiliar ? ` · ${l.auxiliar}` : ''}</div>
-                </div>
-                <div className="registro-link-url-row">
-                  <input type="text" className="registro-link-url" value={l.url || ''} readOnly />
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => handleCopy(l.url, l.repartidorId)}
-                    disabled={!l.url}
-                  >
-                    {copiedId === l.repartidorId ? '✅ Copiado' : '📋 Copiar'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose}>Cerrar</button>

@@ -2452,27 +2452,72 @@ button.nav-card {
   text-align: center;
 }
 
-/* ── Registro de entregas: lista de links por conductor ── */
-.registro-links-list {
+/* ── Registro de entregas: link universal ── */
+.registro-universal-actions {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
-.registro-link-item {
+.registro-universal-actions .btn-secondary {
+  flex: 1;
+}
+
+/* ── Registro de entregas: reporte consolidado por conductor ── */
+.registro-conductores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.registro-conductor-item {
   border: 1px solid rgba(61,31,61,0.1);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: #faf9fb;
 }
 
-.registro-link-info {
+.registro-conductor-info {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 10px;
   margin-bottom: 8px;
+}
+
+/* ── Registro de entregas: página pública, selector de conductor ── */
+.registro-selector-conductor {
+  padding: 8px 0 4px;
+}
+
+.registro-selector-titulo {
+  font-weight: 800;
+  color: #3D1F3D;
+  font-size: 1.1rem;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.registro-selector-select {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a2e;
+  margin-bottom: 12px;
+}
+
+.registro-cambiar-conductor {
+  display: block;
+  margin: 0 0 14px auto;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
 }
 
 .registro-link-conductor {
