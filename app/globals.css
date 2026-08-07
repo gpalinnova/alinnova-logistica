@@ -2638,6 +2638,15 @@ button.nav-card {
   padding: 10px 18px;
 }
 
+/* Tap fiable en iOS (Chrome/Safari usan el mismo motor WebKit ahí):
+   evita que el toque quede "atrapado" sin cursor/feedback y saca el
+   delay/doble-tap-zoom de iOS antiguo en todo lo interactivo de la página. */
+.entregas-public-card button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 /* ── Formulario de registro por colegio ── */
 .entregas-form {
   margin-top: 16px;
@@ -2652,6 +2661,7 @@ button.nav-card {
 .entregas-form textarea {
   font-size: 16px;
   min-height: 44px;
+  touch-action: manipulation;
 }
 
 .entregas-form textarea {
