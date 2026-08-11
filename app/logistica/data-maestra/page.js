@@ -6,6 +6,7 @@ const ITEMS = [
   { href: '/logistica/data-maestra/sitios', icon: '🏫', title: 'Sitios', desc: 'Sitios de entrega', accent: 'accent-green' },
   { href: '/logistica/data-maestra/rutas', icon: '🛣️', title: 'Rutas', desc: 'Rutas de reparto', accent: 'accent-yellow' },
   { href: '/logistica/data-maestra/importar-asignaciones', icon: '🎯', title: 'Importar asignaciones', desc: 'Sembrar asignación sitio-ruta desde el mapa base', accent: 'accent-purple' },
+  { href: '/logistica/data-maestra/directorio', icon: '📚', title: 'Directorio de colegios', desc: 'Cargar directorio maestro desde Excel', accent: 'accent-cyan' },
 ]
 
 function NavCard({ href, icon, title, desc, accent }) {
