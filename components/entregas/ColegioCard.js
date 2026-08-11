@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { guardarEntregaAction } from '../../lib/entregasActions'
 import { buildMensajeWhatsappEntrega } from '../../lib/entregasMensaje'
+import { enviarPorWhatsApp } from '../../lib/whatsappShare'
 
 const CAMPOS_OBLIGATORIOS = [
   ['hora_llegada', 'Este campo es obligatorio.'],
@@ -101,7 +102,7 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
       const payload = await guardarEntregaAction(formData)
       if (accion === 'guardar_whatsapp') {
         const mensaje = buildMensajeWhatsappEntrega({ conductor: nombreConductor, colegio, valores: payload })
-        window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank')
+        await enviarPorWhatsApp(mensaje)
       }
       router.refresh()
       onToggle()
