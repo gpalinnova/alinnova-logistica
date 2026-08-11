@@ -114,7 +114,13 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
 
   return (
     <div className={`entregas-card ${entregado ? 'entregas-card-entregado' : ''}`}>
-      <div className="entregas-card-nombre">{colegio.nombreInstitucion}</div>
+      <div className="entregas-card-nombre-row">
+        <div className="entregas-card-nombre">{colegio.nombreInstitucion}</div>
+        {colegio.turno && <span className="entregas-turno-chip">Turno {colegio.turno}</span>}
+      </div>
+      {colegio.horarioEsperado && (
+        <div className="entregas-card-horario">🕐 Horario esperado: {colegio.horarioEsperado}</div>
+      )}
       <div className="entregas-card-meta">
         Id {colegio.idSitioEntrega} · {colegio.direccion || '-'} · {colegio.localidad || '-'}
       </div>
@@ -138,6 +144,7 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
               id={`llegada-${colegio.sitioId}`}
               type="time"
               name="hora_llegada"
+              step="300"
               defaultValue={horaInputValue(registro?.hora_llegada)}
             />
             <FieldError mensaje={fieldErrors.hora_llegada} />
@@ -161,6 +168,7 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
               id={`recibido-${colegio.sitioId}`}
               type="time"
               name="hora_recibido"
+              step="300"
               defaultValue={horaInputValue(registro?.hora_recibido)}
             />
             <FieldError mensaje={fieldErrors.hora_recibido} />
@@ -172,6 +180,7 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
               id={`salida-${colegio.sitioId}`}
               type="time"
               name="hora_salida"
+              step="300"
               defaultValue={horaInputValue(registro?.hora_salida)}
             />
             <FieldError mensaje={fieldErrors.hora_salida} />

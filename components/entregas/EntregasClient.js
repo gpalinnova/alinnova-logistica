@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import ListaColegios from './ListaColegios'
-import ResumenDiaButton from './ResumenDiaButton'
 
 const STORAGE_KEY = 'registro_conductor_seleccionado'
 const VIGENCIA_MS = 24 * 60 * 60 * 1000
@@ -79,7 +78,6 @@ export default function EntregasClient({ fecha, conductores, colegiosPorConducto
   const colegios = colegiosPorConductor[seleccionado] || []
   const totalColegios = colegios.length
   const entregados = colegios.filter(c => c.registro).length
-  const rutaCompletada = totalColegios > 0 && entregados === totalColegios
   const progresoPct = totalColegios > 0 ? Math.round((entregados / totalColegios) * 100) : 0
 
   return (
@@ -111,14 +109,6 @@ export default function EntregasClient({ fecha, conductores, colegiosPorConducto
             idRuta={seleccionado}
             nombreConductor={conductor.conductor}
           />
-
-          {rutaCompletada && (
-            <div className="entregas-completada">
-              <div className="entregas-completada-emoji">🎉</div>
-              <div className="entregas-completada-texto">Ruta completada</div>
-              <ResumenDiaButton colegios={colegios} conductor={conductor.conductor} fecha={fecha} />
-            </div>
-          )}
         </>
       )}
     </>

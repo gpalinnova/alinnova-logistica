@@ -2678,11 +2678,39 @@ button.nav-card {
   border-color: rgba(37,211,102,0.35);
 }
 
+.entregas-card-nombre-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .entregas-card-nombre {
   font-weight: 800;
   color: #3D1F3D;
   font-size: 1rem;
   margin-bottom: 4px;
+}
+
+.entregas-turno-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #f0e6d0;
+  color: #7a5c1e;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.entregas-card-horario {
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin-bottom: 6px;
 }
 
 .entregas-card-meta {
@@ -2814,25 +2842,4 @@ button.nav-card {
 .btn-whatsapp:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-/* ── Ruta completada ── */
-.entregas-completada {
-  margin-top: 18px;
-  text-align: center;
-  padding: 20px 16px;
-  border-radius: 12px;
-  background: #f0faf4;
-  border: 1px solid rgba(37,211,102,0.35);
-}
-
-.entregas-completada-emoji {
-  font-size: 2rem;
-  margin-bottom: 6px;
-}
-
-.entregas-completada-texto {
-  font-weight: 800;
-  color: #128C4A;
-  margin-bottom: 14px;
 }
