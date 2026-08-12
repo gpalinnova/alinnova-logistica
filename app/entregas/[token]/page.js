@@ -1,6 +1,6 @@
 import { supabase } from '../../../lib/supabase'
 import { todayLocalISO, formatFechaDiaMes, formatFechaLargaSinComa } from '../../../lib/tablaWhatsappUtils'
-import { getRepartidoresActivosFecha } from '../../../lib/registroEntregasCalc'
+import { getRepartidoresActivosFecha, agruparSitiosParaTarjetas } from '../../../lib/registroEntregasCalc'
 import EntregasClient from '../../../components/entregas/EntregasClient'
 
 export const dynamic = 'force-dynamic'
@@ -28,7 +28,16 @@ async function getDatosDelDia(fecha) {
   const colegiosPorConductor = {}
   for (const r of repartidores) {
     conductores.push({ id: r.id, conductor: r.conductor, auxiliar: r.auxiliar, placa: r.placa })
-    colegiosPorConductor[r.id] = r.sitios.map(s => ({ ...s, registro: registrosById.get(s.sitioId) || null }))
+    const tarjetas = agruparSitiosParaTarjetas(r.sitios)
+    colegiosPorConductor[r.id] = tarjetas.map(t => {
+      const registros = t.sitioIds.map(id => registrosById.get(id) || null)
+      return {
+        ...t,
+        registros,
+        registro: registros.find(Boolean) || null,
+        entregado: registros.every(Boolean),
+      }
+    })
   }
 
   return { conductores, colegiosPorConductor }

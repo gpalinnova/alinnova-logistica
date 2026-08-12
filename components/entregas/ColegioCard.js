@@ -37,22 +37,26 @@ function FieldError({ mensaje }) {
   return <div className="entregas-form-field-error">{mensaje}</div>
 }
 
-function ToggleSiNo({ name, initial }) {
+function ToggleSiNo({ name, initial, onChange }) {
   const [value, setValue] = useState(initial)
+  function set(v) {
+    setValue(v)
+    onChange?.(v)
+  }
   return (
     <div className="entregas-toggle">
       <input type="hidden" name={name} value={value ? 'true' : 'false'} />
       <button
         type="button"
         className={`entregas-toggle-btn ${value ? 'entregas-toggle-btn-active' : ''}`}
-        onClick={() => setValue(true)}
+        onClick={() => set(true)}
       >
         Sí
       </button>
       <button
         type="button"
         className={`entregas-toggle-btn ${!value ? 'entregas-toggle-btn-active' : ''}`}
-        onClick={() => setValue(false)}
+        onClick={() => set(false)}
       >
         No
       </button>
@@ -77,8 +81,26 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
   const [saving, setSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [sedeSeleccionada, setSedeSeleccionada] = useState('')
+  const [interventoria, setInterventoria] = useState(colegio.registro ? colegio.registro.interventoria : false)
+  const [nombreInterventora, setNombreInterventora] = useState('')
   const registro = colegio.registro
-  const entregado = !!registro
+  const entregado = colegio.entregado
+  const groupId = colegio.sitioIds.join('-')
+  const esUnificada = colegio.sitioIds.length > 1
+
+  const registrosDelGrupo = (colegio.registros || []).filter(Boolean)
+  const inconsistente = esUnificada && registrosDelGrupo.length > 1 && registrosDelGrupo.some(r => (
+    r.hora_llegada !== registrosDelGrupo[0].hora_llegada ||
+    r.hora_recibido !== registrosDelGrupo[0].hora_recibido ||
+    r.hora_salida !== registrosDelGrupo[0].hora_salida ||
+    r.quien_recibe !== registrosDelGrupo[0].quien_recibe
+  ))
+
+  function handleInterventoriaChange(value) {
+    setInterventoria(value)
+    if (!value) setNombreInterventora('')
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -87,6 +109,12 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
     const formData = new FormData(e.currentTarget)
 
     const errores = validarFormData(formData)
+    if (!sedeSeleccionada) {
+      errores.sede = 'Este campo es obligatorio.'
+    }
+    if (interventoria && !nombreInterventora.trim()) {
+      errores.nombre_interventora = 'Este campo es obligatorio.'
+    }
     if (Object.keys(errores).length > 0) {
       setFieldErrors(errores)
       return
@@ -95,7 +123,7 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
 
     formData.set('fecha', fecha)
     formData.set('id_ruta', idRuta)
-    formData.set('id_sitio_entrega', colegio.sitioId)
+    formData.set('ids_sitios', JSON.stringify(colegio.sitioIds))
 
     setSaving(true)
     try {
@@ -123,7 +151,7 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
         <div className="entregas-card-horario">🕐 Horario esperado: {colegio.horarioEsperado}</div>
       )}
       <div className="entregas-card-meta">
-        Id {colegio.idSitioEntrega} · {colegio.direccion || '-'} · {colegio.localidad || '-'}
+        {colegio.idsSitioEntrega.length > 1 ? 'Ids' : 'Id'} {colegio.idsSitioEntrega.join(', ')} · {colegio.direccion || '-'} · {colegio.localidad || '-'}
       </div>
 
       <div className="entregas-card-footer">
@@ -138,11 +166,31 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
       {isOpen && (
         <form className="entregas-form" onSubmit={handleSubmit} noValidate>
           {errorMsg && <div className="form-error-banner">{errorMsg}</div>}
+          {inconsistente && (
+            <div className="form-error-banner">
+              ⚠️ Los registros de este grupo no coinciden exactamente entre sí. Se precargaron los datos del primero.
+            </div>
+          )}
 
           <div className="form-group">
-            <label htmlFor={`llegada-${colegio.sitioId}`}>⏰ Hora de llegada <RequiredMark /></label>
+            <label htmlFor={`sede-${groupId}`}>🏢 Sede <RequiredMark /></label>
+            <select
+              id={`sede-${groupId}`}
+              value={sedeSeleccionada}
+              onChange={e => setSedeSeleccionada(e.target.value)}
+            >
+              <option value="">Selecciona…</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+            <FieldError mensaje={fieldErrors.sede} />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor={`llegada-${groupId}`}>⏰ Hora de llegada <RequiredMark /></label>
             <input
-              id={`llegada-${colegio.sitioId}`}
+              id={`llegada-${groupId}`}
               type="time"
               name="hora_llegada"
               step="300"
@@ -152,9 +200,9 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
           </div>
 
           <div className="form-group">
-            <label htmlFor={`temp-${colegio.sitioId}`}>🌡️ Temperatura de llegada <RequiredMark /></label>
+            <label htmlFor={`temp-${groupId}`}>🌡️ Temperatura de llegada <RequiredMark /></label>
             <input
-              id={`temp-${colegio.sitioId}`}
+              id={`temp-${groupId}`}
               type="text"
               name="temperatura_llegada"
               defaultValue={temperaturaInputValue(registro)}
@@ -164,9 +212,9 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
           </div>
 
           <div className="form-group">
-            <label htmlFor={`recibido-${colegio.sitioId}`}>⏰ Hora de recibido <RequiredMark /></label>
+            <label htmlFor={`recibido-${groupId}`}>⏰ Hora de recibido <RequiredMark /></label>
             <input
-              id={`recibido-${colegio.sitioId}`}
+              id={`recibido-${groupId}`}
               type="time"
               name="hora_recibido"
               step="300"
@@ -176,9 +224,9 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
           </div>
 
           <div className="form-group">
-            <label htmlFor={`salida-${colegio.sitioId}`}>⏰ Hora de salida <RequiredMark /></label>
+            <label htmlFor={`salida-${groupId}`}>⏰ Hora de salida <RequiredMark /></label>
             <input
-              id={`salida-${colegio.sitioId}`}
+              id={`salida-${groupId}`}
               type="time"
               name="hora_salida"
               step="300"
@@ -188,9 +236,9 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
           </div>
 
           <div className="form-group">
-            <label htmlFor={`quien-${colegio.sitioId}`}>👤 Nombre de quien recibe <RequiredMark /></label>
+            <label htmlFor={`quien-${groupId}`}>👤 Nombre de quien recibe <RequiredMark /></label>
             <input
-              id={`quien-${colegio.sitioId}`}
+              id={`quien-${groupId}`}
               type="text"
               name="quien_recibe"
               defaultValue={registro?.quien_recibe || ''}
@@ -199,9 +247,9 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
           </div>
 
           <div className="form-group">
-            <label htmlFor={`cargo-${colegio.sitioId}`}>💼 Cargo <RequiredMark /></label>
+            <label htmlFor={`cargo-${groupId}`}>💼 Cargo <RequiredMark /></label>
             <input
-              id={`cargo-${colegio.sitioId}`}
+              id={`cargo-${groupId}`}
               type="text"
               name="cargo_recibe"
               defaultValue={registro?.cargo_recibe || ''}
@@ -217,21 +265,38 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
 
           <div className="form-group">
             <label>🔍 Interventoría <RequiredMark /></label>
-            <ToggleSiNo name="interventoria" initial={registro ? registro.interventoria : false} />
+            <ToggleSiNo
+              name="interventoria"
+              initial={registro ? registro.interventoria : false}
+              onChange={handleInterventoriaChange}
+            />
           </div>
 
+          {interventoria && (
+            <div className="form-group">
+              <label htmlFor={`interventora-${groupId}`}>📋 Nombre de la interventora <RequiredMark /></label>
+              <input
+                id={`interventora-${groupId}`}
+                type="text"
+                value={nombreInterventora}
+                onChange={e => setNombreInterventora(e.target.value)}
+              />
+              <FieldError mensaje={fieldErrors.nombre_interventora} />
+            </div>
+          )}
+
           <div className="form-group">
-            <label htmlFor={`metodo-${colegio.sitioId}`}>📊 Método de conteo <RequiredMark /></label>
-            <select id={`metodo-${colegio.sitioId}`} name="metodo_conteo" defaultValue={registro?.metodo_conteo || 'aleatorio'}>
+            <label htmlFor={`metodo-${groupId}`}>📊 Método de conteo <RequiredMark /></label>
+            <select id={`metodo-${groupId}`} name="metodo_conteo" defaultValue={registro?.metodo_conteo || 'aleatorio'}>
               <option value="aleatorio">Aleatorio</option>
               <option value="uno_a_uno">Uno a uno</option>
             </select>
           </div>
 
           <div className="form-group">
-            <label htmlFor={`presentan-${colegio.sitioId}`}>🧺 Canastillas que se presentan <RequiredMark /></label>
+            <label htmlFor={`presentan-${groupId}`}>🧺 Canastillas que se presentan <RequiredMark /></label>
             <input
-              id={`presentan-${colegio.sitioId}`}
+              id={`presentan-${groupId}`}
               type="number"
               name="canastillas_presentan"
               defaultValue={registro?.canastillas_presentan ?? ''}
@@ -241,9 +306,9 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
           </div>
 
           <div className="form-group">
-            <label htmlFor={`retiran-${colegio.sitioId}`}>🧺 Canastillas que se retiran <RequiredMark /></label>
+            <label htmlFor={`retiran-${groupId}`}>🧺 Canastillas que se retiran <RequiredMark /></label>
             <input
-              id={`retiran-${colegio.sitioId}`}
+              id={`retiran-${groupId}`}
               type="number"
               name="canastillas_retiran"
               defaultValue={registro?.canastillas_retiran ?? ''}
@@ -253,9 +318,9 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
           </div>
 
           <div className="form-group">
-            <label htmlFor={`obs-${colegio.sitioId}`}>📝 Observaciones</label>
+            <label htmlFor={`obs-${groupId}`}>📝 Observaciones</label>
             <textarea
-              id={`obs-${colegio.sitioId}`}
+              id={`obs-${groupId}`}
               name="observacion"
               defaultValue={registro?.observacion || ''}
               rows={3}
