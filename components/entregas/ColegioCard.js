@@ -83,7 +83,7 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
   const [fieldErrors, setFieldErrors] = useState({})
   const [sedeSeleccionada, setSedeSeleccionada] = useState('')
   const [interventoria, setInterventoria] = useState(colegio.registro ? colegio.registro.interventoria : false)
-  const [nombreInterventora, setNombreInterventora] = useState('')
+  const [nombreInterventora, setNombreInterventora] = useState(colegio.registro?.nombre_interventora || '')
   const registro = colegio.registro
   const entregado = colegio.entregado
   const groupId = colegio.sitioIds.join('-')
@@ -278,6 +278,7 @@ export default function ColegioCard({ colegio, fecha, idRuta, nombreConductor, i
               <input
                 id={`interventora-${groupId}`}
                 type="text"
+                name="nombre_interventora"
                 value={nombreInterventora}
                 onChange={e => setNombreInterventora(e.target.value)}
               />
