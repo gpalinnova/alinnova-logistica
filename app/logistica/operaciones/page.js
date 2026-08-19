@@ -4,6 +4,7 @@ import PageHeader from '../../../components/PageHeader'
 const ITEMS = [
   { href: '/logistica/operaciones/importar-oc', icon: '📥', title: 'Importar OC', desc: 'Cargue de órdenes de compra', accent: 'accent-cyan' },
   { href: '/logistica/operaciones/reprogramacion', icon: '📆', title: 'Reprogramación de fechas', desc: 'Ajuste de fechas de entrega', accent: 'accent-orange' },
+  { href: '/logistica/operaciones/sectorizacion', icon: '📍', title: 'Sectorización', desc: 'Resumen por localidad y asignación masiva a rutas', accent: 'accent-blue' },
   { href: '/logistica/operaciones/rutero', icon: '🗺️', title: 'Rutero del día', desc: 'Asignación de rutas por sitio', accent: 'accent-purple' },
   { href: '/logistica/operaciones/remisiones', icon: '📄', title: 'Remisiones', desc: 'PDF de remisiones por sitio', accent: 'accent-darkgreen' },
   { href: '/logistica/operaciones/ruteros', icon: '📋', title: 'Ruteros', desc: 'PDF de cargue por conductor', accent: 'accent-yellow' },
