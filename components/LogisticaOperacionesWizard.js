@@ -83,6 +83,13 @@ export default function LogisticaOperacionesWizard() {
 
   const productosPorSap = useMemo(() => new Map(productos.map(p => [p.sap, p])), [productos])
 
+  // El wizard de Logística es solo Panadería/AM-PM/Gastronomía: los renglones
+  // de Reforzados (identificados por nombre, igual que en el flujo de
+  // Reforzados) se descartan en todo lugar donde se agrupa por OC o producto.
+  function excluirReforzados(rows) {
+    return rows.filter(r => !esRefrigerioReforzado(r.nombre))
+  }
+
   // ============================== PASO 1 — CARGAR OC ==============================
   function handleFileSelected(file) {
     if (!file) return
@@ -100,9 +107,15 @@ export default function LogisticaOperacionesWizard() {
     try {
       const buffer = await readFileAsArrayBuffer(file)
       const rows = parsearExcelWizard(buffer)
+      const rowsUtiles = excluirReforzados(rows)
+
+      if (!rowsUtiles.length) {
+        setFileError('Este archivo no contiene productos procesables por el wizard de Logística (todo es Reforzados). Usa el módulo de Reforzados para procesarlo.')
+        return
+      }
 
       const ocMap = new Map()
-      rows.forEach(r => {
+      rowsUtiles.forEach(r => {
         if (!ocMap.has(r.oc)) ocMap.set(r.oc, { numero: r.oc, fecha: r.fecha_entrega, colegios: new Set(), lineas: new Set(), cantidad: 0, filas: 0 })
         const o = ocMap.get(r.oc)
         o.colegios.add(r.punto)
@@ -154,11 +167,7 @@ export default function LogisticaOperacionesWizard() {
 
   function buildProductos() {
     const ocsSet = new Set(ocs.filter(o => o.selected).map(o => o.numero))
-    // El wizard de Logística es solo Panadería/AM-PM/Gastronomía: los renglones
-    // de Reforzados (identificados por nombre, igual que en el flujo de
-    // Reforzados) se descartan antes de armar colegios y productos, así el
-    // efecto se propaga solo a localidades/rutas más abajo.
-    const rows = rawRows.filter(r => ocsSet.has(r.oc) && !esRefrigerioReforzado(r.nombre))
+    const rows = excluirReforzados(rawRows.filter(r => ocsSet.has(r.oc)))
 
     const colegiosNuevos = {}
     rows.forEach(r => {
