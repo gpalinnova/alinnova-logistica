@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import PageHeader from './PageHeader'
 import LogisticaWizardPrint from './LogisticaWizardPrint'
+import LogisticaDirectorioModal from './LogisticaDirectorioModal'
 import { supabase } from '../lib/supabase'
 import { readFileAsArrayBuffer } from '../lib/parseRutasExcel'
 import { parsearExcelWizard } from '../lib/logisticaWizardExcel'
@@ -55,6 +56,7 @@ export default function LogisticaOperacionesWizard() {
 
   const [config, setConfig] = useState({ nroInicio: 1, fechaEmision: '', fechaEntrega: '' })
   const [preview, setPreview] = useState(null)
+  const [modalDirectorioAbierto, setModalDirectorioAbierto] = useState(false)
 
   const fileInputRef = useRef(null)
 
@@ -208,6 +210,44 @@ export default function LogisticaOperacionesWizard() {
   }
   function toggleVisiblesProductos(checked) {
     setProductos(prev => prev.map(p => matchesFilter(p, filterLinea) ? { ...p, selected: checked } : p))
+  }
+
+  function abrirModalDirectorio() {
+    if (!Object.values(colegios).some(c => !c.enDirectorio)) return
+    setModalDirectorioAbierto(true)
+  }
+
+  // Al guardar el modal: los colegios recién insertados en logistica_sitios se
+  // aplican tanto al directorio (para que futuras OCs los encuentren) como a
+  // los colegios de la OC actual, para que el flujo siga como si siempre
+  // hubieran estado en el directorio.
+  function handleDirectorioGuardado(rowsInsertadas) {
+    const porPunto = new Map(rowsInsertadas.map(r => [String(r.punto_wms), r]))
+
+    setDirectorio(prev => {
+      const next = new Map(prev)
+      porPunto.forEach((sitio, punto) => next.set(punto, sitio))
+      return next
+    })
+
+    setColegios(prev => {
+      const next = { ...prev }
+      porPunto.forEach((sitio, punto) => {
+        if (!next[punto]) return
+        next[punto] = {
+          ...next[punto],
+          nombre: sitio.nombre_institucion,
+          sitioEntrega: sitio.nombre_sitio || sitio.nombre_institucion,
+          localidad: sitio.localidad,
+          direccion: sitio.direccion,
+          sedeEducativa: sitio.sede_educativa,
+          enDirectorio: true,
+        }
+      })
+      return next
+    })
+
+    setModalDirectorioAbierto(false)
   }
 
   function confirmProductos() {
@@ -610,9 +650,14 @@ export default function LogisticaOperacionesWizard() {
               )}
               {Object.values(colegios).some(c => !c.enDirectorio) && (
                 <div className="logistica-warning-box">
-                  ⚠ {Object.values(colegios).filter(c => !c.enDirectorio).length} colegio(s) no están en el directorio (logistica_sitios). Sus remisiones y ruteros saldrán con dirección "—".
-                  <div style={{ marginTop: 6, fontSize: 11, fontFamily: 'monospace' }}>
-                    {Object.values(colegios).filter(c => !c.enDirectorio).map(c => `${c.punto} — ${c.nombre}`).join(' · ')}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div>
+                      ⚠ {Object.values(colegios).filter(c => !c.enDirectorio).length} colegio(s) no están en el directorio (logistica_sitios). Sus remisiones y ruteros saldrán con dirección "—".
+                      <div style={{ marginTop: 6, fontSize: 11, fontFamily: 'monospace' }}>
+                        {Object.values(colegios).filter(c => !c.enDirectorio).map(c => `${c.punto} — ${c.nombre}`).join(' · ')}
+                      </div>
+                    </div>
+                    <button className="btn-primary" style={{ flexShrink: 0 }} onClick={abrirModalDirectorio}>Completar datos</button>
                   </div>
                 </div>
               )}
@@ -928,6 +973,19 @@ export default function LogisticaOperacionesWizard() {
           config={config}
           rutasIndex={rutasIndex}
           onClose={() => setPreview(null)}
+        />
+      )}
+
+      {modalDirectorioAbierto && (
+        <LogisticaDirectorioModal
+          colegiosFaltantes={Object.values(colegios).filter(c => !c.enDirectorio).map(c => ({
+            punto: c.punto,
+            institucion: c.nombre,
+            sitioEntrega: c.sitioEntrega,
+            localidad: c.localidad,
+          }))}
+          onClose={() => setModalDirectorioAbierto(false)}
+          onSaved={handleDirectorioGuardado}
         />
       )}
     </div>

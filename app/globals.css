@@ -777,6 +777,25 @@ a {
   border-color: #3D1F3D;
 }
 
+.data-table input[type="text"] {
+  width: 100%;
+  min-width: 140px;
+  padding: 7px 9px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a2e;
+}
+.data-table input[type="text"]:focus { outline: none; border-color: #3D1F3D; }
+.data-table input[type="text"]:disabled { background: #f3f4f6; color: #9ca3af; }
+
+.input-error {
+  border-color: #dc2626 !important;
+  background: #fef2f2;
+}
+
 .form-group select:disabled {
   background: #f3f4f6;
   color: #9ca3af;
