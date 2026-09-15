@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { readFileAsArrayBuffer } from '../lib/parseRutasExcel'
 import { parsearExcelWizard } from '../lib/logisticaWizardExcel'
 import { canastillasDe, fmtN } from '../lib/logisticaWizardCalc'
+import { esRefrigerioReforzado } from '../lib/logisticaOcImport'
 
 const STEP_LABELS = ['Cargar OC', 'Seleccionar OC', 'Productos', 'Zonas y rutas', 'Distribuir', 'Conductores', 'Generar']
 
@@ -153,7 +154,11 @@ export default function LogisticaOperacionesWizard() {
 
   function buildProductos() {
     const ocsSet = new Set(ocs.filter(o => o.selected).map(o => o.numero))
-    const rows = rawRows.filter(r => ocsSet.has(r.oc))
+    // El wizard de Logística es solo Panadería/AM-PM/Gastronomía: los renglones
+    // de Reforzados (identificados por nombre, igual que en el flujo de
+    // Reforzados) se descartan antes de armar colegios y productos, así el
+    // efecto se propaga solo a localidades/rutas más abajo.
+    const rows = rawRows.filter(r => ocsSet.has(r.oc) && !esRefrigerioReforzado(r.nombre))
 
     const colegiosNuevos = {}
     rows.forEach(r => {
@@ -635,7 +640,20 @@ export default function LogisticaOperacionesWizard() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 3 && productos.length === 0 && (
+            <div>
+              <h3>Productos en las OCs seleccionadas</h3>
+              <div className="empty-state">
+                <p>⚠ Esta OC no contiene productos procesables por el wizard de Logística (solo Reforzados). Usa el módulo de Reforzados para procesarla.</p>
+              </div>
+              <div className="page-toolbar spread">
+                <button className="btn-secondary" onClick={() => setStep(2)}>← OCs</button>
+                <button className="btn-secondary" onClick={() => setStep(1)}>← Cargar otro archivo</button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && productos.length > 0 && (
             <div>
               <h3>Productos en las OCs seleccionadas</h3>
               <div className="rem-stats-row">
