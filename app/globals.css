@@ -423,6 +423,11 @@ a {
   margin-bottom: 8px;
 }
 
+.nav-grid-centered {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 320px));
+  justify-content: center;
+}
+
 .nav-card {
   background: #fff;
   border-radius: 14px;
@@ -2843,3 +2848,332 @@ button.nav-card {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Wizard de Operaciones del Día (Panadería / Gastronomía)
+   ══════════════════════════════════════════════════════════════════ */
+
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 20px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.wizard-step {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 12px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #9ca3af;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wizard-step.active { color: #1a472a; background: rgba(26, 71, 42, 0.06); }
+.wizard-step.done { color: #15803d; cursor: pointer; }
+.wizard-step.done:hover { background: rgba(21, 128, 61, 0.06); }
+
+.wizard-step-num {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+}
+
+.wizard-step.done .wizard-step-num { background: #15803d; border-color: #15803d; color: #fff; }
+
+.wizard-oc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.wizard-oc-card {
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px 16px;
+  cursor: pointer;
+  position: relative;
+}
+
+.wizard-oc-card.selected {
+  border-color: #1a472a;
+  background: rgba(26, 71, 42, 0.05);
+  box-shadow: inset 3px 0 0 #1a472a;
+}
+
+.wizard-oc-num { font-weight: 700; color: #1a472a; margin-bottom: 2px; }
+.wizard-oc-date { font-size: 0.76rem; color: #9ca3af; margin-bottom: 8px; }
+.wizard-oc-info { display: flex; gap: 12px; font-size: 0.8rem; flex-wrap: wrap; }
+
+.wizard-oc-chk {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+}
+
+.wizard-oc-card.selected .wizard-oc-chk {
+  background: #1a472a;
+  border-color: #1a472a;
+}
+.wizard-oc-card.selected .wizard-oc-chk::after { content: '✓'; color: #fff; font-size: 12px; display: block; text-align: center; line-height: 14px; }
+
+.wizard-chk-cell { width: 40px; text-align: center; }
+.wizard-chk-cell input { transform: scale(1.15); cursor: pointer; }
+
+.table-toolbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.82rem;
+  color: #4b5563;
+  flex-wrap: wrap;
+}
+
+.wizard-ruta-summary, .wizard-ruta-detail, .wizard-ruta-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.wizard-ruta-summary { padding: 14px 18px; }
+.wizard-ruta-summary-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wizard-ruta-summary-head h4 { color: #1a472a; font-size: 0.95rem; }
+.wizard-ruta-summary-info { display: flex; gap: 16px; font-size: 0.78rem; color: #6b7280; flex-wrap: wrap; margin-top: 6px; }
+.wizard-ruta-summary-info b { color: #1a1a2e; }
+
+.wizard-ruta-detail-head {
+  padding: 12px 16px;
+  background: rgba(26, 71, 42, 0.05);
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-radius: 10px 10px 0 0;
+}
+.wizard-ruta-detail-head h4 { color: #1a472a; font-size: 0.9rem; }
+.wizard-ruta-detail-meta { font-size: 0.76rem; color: #6b7280; }
+
+.wizard-localidad-block { padding: 6px 16px 10px; }
+.wizard-col-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 0.84rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+.wizard-col-row:last-child { border-bottom: none; }
+.wizard-col-row select { min-width: 160px; padding: 6px 8px; border: 1.5px solid #d1d5db; border-radius: 6px; }
+
+.wizard-ruta-card { padding: 14px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.wizard-ruta-card-head { flex: 1; min-width: 220px; }
+.wizard-ruta-nombre {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a472a;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  padding: 3px 0;
+  width: 100%;
+}
+.wizard-ruta-nombre:focus { outline: none; border-bottom-color: #1a472a; }
+.wizard-ruta-nombre-static { font-size: 0.95rem; font-weight: 700; color: #1a472a; }
+.wizard-ruta-locs { font-size: 0.76rem; color: #9ca3af; margin-top: 3px; }
+
+.wizard-ruta-stats { display: flex; gap: 16px; }
+.wizard-st { display: flex; flex-direction: column; align-items: center; }
+.wizard-st b { font-size: 1rem; color: #1a472a; }
+.wizard-st span { font-size: 0.66rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+.wizard-ruta-inputs { display: flex; gap: 12px; flex-wrap: wrap; }
+.wizard-ruta-inputs .form-group { min-width: 170px; margin-bottom: 0; }
+
+.wizard-config-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 20px; margin-bottom: 8px; }
+.wizard-config-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.wizard-config-row .form-group { min-width: 170px; margin-bottom: 0; }
+
+/* ── Preview / impresión: rutero + remisiones ── */
+
+.wizard-print-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #e5e5e5;
+  overflow-y: auto;
+}
+
+.wp-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #1a472a;
+  color: #fff;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.wp-toolbar-title { font-weight: 600; font-size: 0.92rem; }
+.wp-toolbar-actions { display: flex; gap: 8px; }
+.wp-toolbar-actions .btn-secondary { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.6); }
+.wp-toolbar-actions .btn-primary { background: #fff; color: #1a472a; }
+
+.wp-preview-mount { padding: 20px; }
+
+.wizard-print-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 8mm 10mm;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9pt;
+  color: #000;
+  background: #fff;
+  border: 1px solid #ccc;
+  margin: 0 auto 8mm;
+  box-sizing: border-box;
+}
+.wizard-print-page.landscape { width: 297mm; min-height: 210mm; padding: 6mm 8mm; }
+
+@media print {
+  body > *:not(.wizard-print-root) { display: none !important; }
+  .wizard-print-root { position: static; background: none; overflow: visible; }
+  .wp-preview-mount { padding: 0; }
+  .no-print { display: none !important; }
+
+  @page wizard-portrait { size: A4 portrait; margin: 8mm 10mm; }
+  @page wizard-landscape { size: A4 landscape; margin: 6mm 8mm; }
+
+  .wizard-print-page {
+    page: wizard-portrait;
+    page-break-after: always;
+    page-break-inside: avoid;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    border: none;
+  }
+  .wizard-print-page.landscape { page: wizard-landscape; width: 100%; min-height: 0; }
+  .wizard-print-page:last-child { page-break-after: auto; }
+}
+
+.wp-logo-box { border: 2px solid #000; padding: 8px 12px; font-weight: 900; letter-spacing: 3px; font-size: 13pt; text-align: center; }
+.wp-mono { font-family: 'Courier New', monospace; }
+.wp-tdl { text-align: left; }
+.wp-tdr { text-align: right; }
+
+/* Rutero */
+.wp-rut-head { display: flex; align-items: stretch; border: 1px solid #000; margin-bottom: 6px; }
+.wp-rut-head-logo { width: 130px; padding: 10px; border-right: 1px solid #000; display: flex; align-items: center; justify-content: center; }
+.wp-rut-head-title { flex: 1; padding: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; letter-spacing: 2px; border-right: 1px solid #000; }
+.wp-rut-head-code { width: 180px; font-size: 8pt; }
+.wp-code-row { display: flex; border-bottom: 1px solid #000; }
+.wp-code-row:last-child { border-bottom: none; }
+.wp-code-lbl { flex: 1; padding: 3px 6px; border-right: 1px solid #000; font-weight: 700; background: #f0f0f0; }
+.wp-code-val { flex: 1; padding: 3px 6px; text-align: right; }
+
+.wp-rut-info { display: flex; gap: 20px; padding: 5px 0; margin-bottom: 6px; font-size: 9pt; flex-wrap: wrap; }
+.wp-ri { display: flex; gap: 5px; }
+.wp-val { text-decoration: underline; min-width: 100px; display: inline-block; }
+
+.wp-rut-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 8px; }
+.wp-rut-table th, .wp-rut-table td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: middle; }
+.wp-rut-table th { background: #d5d5d5; font-weight: 700; font-size: 8pt; }
+.wp-h-group { background: #b0b0b0 !important; font-size: 9pt; }
+.wp-total-row td { background: #f0f0f0; font-weight: 700; }
+
+.wp-rut-foot { display: flex; gap: 12px; margin-top: 6px; font-size: 9pt; }
+.wp-foot-signs { flex: 2; }
+.wp-sign-row { display: flex; gap: 20px; margin-bottom: 4px; }
+.wp-sf { display: flex; gap: 5px; align-items: baseline; }
+.wp-sign-line { border-bottom: 1px solid #000; display: inline-block; padding: 0 4px; }
+.wp-foot-totals { border: 1px solid #000; font-size: 8pt; }
+.wp-foot-totals table { border-collapse: collapse; width: 100%; }
+.wp-foot-totals td { border: 1px solid #000; padding: 4px 10px; text-align: center; }
+.wp-lbl { background: #f0f0f0; font-weight: 700; font-size: 7pt; }
+.wp-val-big { font-size: 12pt; font-weight: 700; }
+
+.wp-rut-lote { margin-top: 8px; border: 1px solid #000; font-size: 8pt; }
+.wp-rut-lote table { width: 100%; border-collapse: collapse; }
+.wp-rut-lote th, .wp-rut-lote td { border: 1px solid #333; padding: 3px 6px; text-align: center; }
+.wp-rut-lote th { background: #d5d5d5; font-size: 7pt; font-weight: 700; }
+.wp-rut-lote td { height: 20px; }
+
+/* Remisión */
+.wp-rem-page { padding: 10mm 12mm; }
+.wp-rem-hdr { display: flex; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; align-items: stretch; }
+.wp-rem-hdr-logo { width: 130px; padding-right: 12px; display: flex; align-items: center; }
+.wp-rem-hdr-logo .wp-logo-box { width: 100%; }
+.wp-rem-hdr-empresa { flex: 1; padding: 4px 12px; font-size: 9pt; }
+.wp-he-line { padding: 2px 0; line-height: 1.35; }
+.wp-rem-hdr-num { width: 175px; text-align: right; font-size: 9pt; border-left: 1px solid #ccc; padding-left: 12px; }
+.wp-hn-titulo { font-size: 14pt; font-weight: 900; letter-spacing: 2px; margin-bottom: 4px; }
+.wp-hn-line { margin: 3px 0; }
+.wp-hn-copia { margin-top: 6px; font-size: 8pt; font-weight: 600; padding: 3px 8px; display: inline-block; background: #eef7ea; color: #1a472a; border: 1px solid #1a472a; font-style: italic; }
+
+.wp-rem-inst { border: 1px solid #000; padding: 8px 10px; margin-bottom: 10px; font-size: 9pt; }
+.wp-rem-inst > div { padding: 2px 0; }
+.wp-rem-inst-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 3px; }
+
+.wp-rem-tabla { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 10px; }
+.wp-rem-tabla th, .wp-rem-tabla td { border: 1px solid #333; padding: 7px 6px; }
+.wp-rem-tabla th { background: #000; color: #fff; font-size: 8pt; text-align: center; }
+.wp-c-item, .wp-c-cant { text-align: center; }
+.wp-c-vu, .wp-c-vt { text-align: right; }
+.wp-rem-tabla tfoot td { font-weight: 700; background: #f0f0f0; }
+.wp-tot-lbl, .wp-tot-cant { text-align: center; }
+.wp-tot-vt { text-align: right; }
+
+.wp-rem-recibi { border: 1px solid #000; padding: 10px 12px; margin-bottom: 10px; font-size: 9pt; }
+.wp-rr-titulo { text-align: center; font-weight: 700; font-size: 9pt; margin-bottom: 8px; }
+.wp-rr-metodo { margin-bottom: 10px; font-size: 8.5pt; }
+.wp-chk { width: 11px; height: 11px; border: 1px solid #000; display: inline-block; vertical-align: middle; margin: 0 3px; }
+.wp-rr-firmas { display: flex; gap: 10px; margin-top: 14px; }
+.wp-rr-fcell { flex: 1; text-align: center; font-size: 7.5pt; }
+.wp-rr-line { border-bottom: 1px solid #000; height: 42px; margin-bottom: 3px; }
+.wp-rr-lbl { color: #444; }
+.wp-rr-legal { margin-top: 10px; font-size: 7pt; color: #555; font-style: italic; }
+
+.wp-rem-trans { border: 1px solid #000; padding: 10px 12px; margin-bottom: 10px; font-size: 8.5pt; }
+.wp-rt-title { text-align: center; font-weight: 700; margin-bottom: 8px; text-decoration: underline; }
+.wp-rt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+.wp-rt-field { display: flex; gap: 5px; align-items: baseline; }
+.wp-rt-field label { font-weight: 700; white-space: nowrap; font-size: 8.5pt; color: #000; }
+.wp-rt-line { flex: 1; border-bottom: 1px solid #000; min-width: 40px; min-height: 14px; }
+
+.wp-rem-obs { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 8pt; align-items: flex-end; }
+.wp-obs-left { flex: 1; }
+.wp-obs-note { border: 1px solid #000; padding: 7px 8px; margin-top: 6px; font-size: 8pt; font-weight: 600; }
+.wp-obs-sign { width: 140px; text-align: center; font-size: 8pt; }
+.wp-sl { border-bottom: 1px solid #000; height: 34px; margin-bottom: 3px; }

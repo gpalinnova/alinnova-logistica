@@ -2,12 +2,8 @@ import Link from 'next/link'
 import PageHeader from '../../../components/PageHeader'
 
 const ITEMS = [
-  { href: '/logistica/operaciones/importar-oc', icon: '📥', title: 'Importar OC', desc: 'Cargue de órdenes de compra', accent: 'accent-cyan' },
-  { href: '/logistica/operaciones/reprogramacion', icon: '📆', title: 'Reprogramación de fechas', desc: 'Ajuste de fechas de entrega', accent: 'accent-orange' },
-  { href: '/logistica/operaciones/sectorizacion', icon: '📍', title: 'Sectorización', desc: 'Resumen por localidad y asignación masiva a rutas', accent: 'accent-blue' },
-  { href: '/logistica/operaciones/rutero', icon: '🗺️', title: 'Rutero del día', desc: 'Asignación de rutas por sitio', accent: 'accent-purple' },
-  { href: '/logistica/operaciones/remisiones', icon: '📄', title: 'Remisiones', desc: 'PDF de remisiones por sitio', accent: 'accent-darkgreen' },
-  { href: '/logistica/operaciones/ruteros', icon: '📋', title: 'Ruteros', desc: 'PDF de cargue por conductor', accent: 'accent-yellow' },
+  { href: '/logistica/operaciones/panaderia', icon: '🥖', title: 'Panadería', desc: 'Cargar OC, armar rutas y generar rutero + remisiones', accent: 'accent-cyan' },
+  { href: '/logistica/operaciones/gastronomia', icon: '🍽️', title: 'Gastronomía', desc: 'Cargar OC, armar rutas y generar rutero + remisiones', accent: 'accent-orange' },
 ]
 
 function NavCard({ href, icon, title, desc, accent }) {
@@ -26,7 +22,7 @@ export default function OperacionesPage() {
       <main className="main-content">
         <PageHeader backHref="/logistica" backLabel="Volver" title="📅 Operaciones del Día — Logística" subtitle="Panadería y Gastronomía" />
         <div className="page-content">
-          <div className="nav-grid">
+          <div className="nav-grid nav-grid-centered">
             {ITEMS.map(item => <NavCard key={item.href} {...item} />)}
           </div>
         </div>

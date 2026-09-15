@@ -3,9 +3,6 @@ import PageHeader from '../../../components/PageHeader'
 
 const ITEMS = [
   { href: '/logistica/data-maestra/productos', icon: '🥐', title: 'Productos', desc: 'Productos del módulo Logística', accent: 'accent-blue' },
-  { href: '/logistica/data-maestra/sitios', icon: '🏫', title: 'Sitios', desc: 'Sitios de entrega', accent: 'accent-green' },
-  { href: '/logistica/data-maestra/rutas', icon: '🛣️', title: 'Rutas', desc: 'Rutas de reparto', accent: 'accent-yellow' },
-  { href: '/logistica/data-maestra/importar-asignaciones', icon: '🎯', title: 'Importar asignaciones', desc: 'Sembrar asignación sitio-ruta desde el mapa base', accent: 'accent-purple' },
   { href: '/logistica/data-maestra/directorio', icon: '📚', title: 'Directorio de colegios', desc: 'Cargar directorio maestro desde Excel', accent: 'accent-cyan' },
 ]
 
@@ -25,7 +22,7 @@ export default function DataMaestraPage() {
       <main className="main-content">
         <PageHeader backHref="/logistica" backLabel="Volver" title="🗂️ Data Maestra — Logística" subtitle="Panadería y Gastronomía" />
         <div className="page-content">
-          <div className="nav-grid">
+          <div className="nav-grid nav-grid-centered">
             {ITEMS.map(item => <NavCard key={item.href} {...item} />)}
           </div>
         </div>

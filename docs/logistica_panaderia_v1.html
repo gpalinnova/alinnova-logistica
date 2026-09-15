@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alinnova — Logística Panadería</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #f5f2ee;
+    --surface: #ffffff;
+    --surface2: #f0ece6;
+    --border: #ddd8d0;
+    --accent: #1a472a;
+    --accent2: #2d7a47;
+    --accent3: #5cb87a;
+    --text: #1c1a17;
+    --muted: #8a8278;
+    --error: #c0392b;
+    --ok: #27ae60;
+    --warn: #e67e22;
+    --info: #2471a3;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--accent);
+    padding: 0 40px;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border-bottom: 3px solid var(--accent2);
+  }
+  .logo-block {
+    padding: 16px 24px 16px 0;
+    border-right: 1px solid rgba(255,255,255,.15);
+    margin-right: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .logo-text {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: 5px;
+    color: #fff;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,.5);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .header-title { display: flex; flex-direction: column; justify-content: center; }
+  .header-title h1 { font-size: 14px; font-weight: 500; color: rgba(255,255,255,.9); letter-spacing: .5px; }
+  .header-title p { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 3px; font-family: 'DM Mono', monospace; }
+  .header-badge { margin-left: auto; align-self: center; background: var(--accent3); color: #fff; padding: 4px 14px; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; border-radius: 2px; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 28px 40px 80px; }
+
+  /* STEPS */
+  .steps {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .step {
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all .3s;
+  }
+  .step:last-child { border-right: none; }
+  .step.active { color: var(--accent); background: rgba(26,71,42,.04); font-weight: 500; }
+  .step.done { color: var(--ok); cursor: pointer; }
+  .step.done:hover { background: rgba(39,174,96,.05); }
+  .step-num {
+    width: 20px; height: 20px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; flex-shrink: 0;
+  }
+  .step.done .step-num { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+  /* UPLOAD */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .3s;
+    background: var(--surface);
+    position: relative;
+    border-radius: 4px;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent2); background: rgba(26,71,42,.02); }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 38px; margin-bottom: 14px; }
+  .upload-zone h2 { font-size: 17px; font-weight: 500; margin-bottom: 8px; }
+  .upload-zone p { font-size: 13px; color: var(--muted); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 26px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::before { content: '▸'; color: var(--accent2); }
+
+  /* STATS */
+  .stats-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 12px 18px;
+    border-radius: 4px;
+    flex: 1;
+    min-width: 130px;
+    text-align: center;
+  }
+  .stat-card .stat-num { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; color: var(--accent); line-height: 1; margin-bottom: 5px; }
+  .stat-card .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+
+  /* CARDS */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .oc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .oc-card:hover { border-color: var(--accent2); }
+  .oc-card.selected { border-color: var(--accent2); background: rgba(26,71,42,.04); box-shadow: inset 3px 0 0 var(--accent2); }
+  .oc-card .oc-num { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--accent); margin-bottom: 3px; }
+  .oc-card .oc-date { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+  .oc-card .oc-info { display: flex; gap: 12px; font-size: 11px; color: var(--text); flex-wrap: wrap; }
+  .oc-card .oc-info span { display: flex; gap: 4px; }
+  .oc-card .oc-info b { color: var(--accent); font-weight: 600; }
+  .oc-card .oc-chk { position: absolute; top: 14px; right: 14px; width: 18px; height: 18px; border: 2px solid var(--border); border-radius: 3px; display: flex; align-items: center; justify-content: center; }
+  .oc-card.selected .oc-chk { background: var(--accent2); border-color: var(--accent2); color: #fff; font-size: 11px; }
+  .oc-card.selected .oc-chk::after { content: '✓'; }
+
+  /* TABLES */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .table-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    background: var(--surface2);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .table-scroll { max-height: 500px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    text-align: left;
+    padding: 9px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+    background: var(--surface2);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid rgba(0,0,0,.05); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr.selected td { background: rgba(26,71,42,.04); }
+  tr.row-warn td { background: rgba(230,126,34,.06); }
+  tr.row-error td { background: rgba(192,57,43,.04); }
+  .mono { font-family: 'DM Mono', monospace; }
+  .num { font-family: 'DM Mono', monospace; text-align: right; }
+  .center { text-align: center; }
+
+  /* CHECKBOX */
+  .chk-cell { width: 34px; text-align: center; }
+  .chk-cell input { transform: scale(1.2); cursor: pointer; accent-color: var(--accent2); }
+
+  /* PILLS */
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-family: 'DM Mono', monospace; font-weight: 500; }
+  .pill-panaderia { background: rgba(26,71,42,.1); color: var(--accent); }
+  .pill-gastronomia { background: rgba(230,126,34,.12); color: var(--warn); }
+  .pill-ensamble { background: rgba(36,113,163,.1); color: var(--info); }
+  .pill-otro { background: rgba(138,130,120,.15); color: var(--muted); }
+  .pill-error { background: rgba(192,57,43,.12); color: var(--error); }
+  .pill-ok { background: rgba(39,174,96,.12); color: var(--ok); }
+
+  /* INPUTS */
+  input[type="text"], input[type="number"], input[type="date"], select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    border-radius: 2px;
+    transition: border-color .2s;
+  }
+  input:focus, select:focus { border-color: var(--accent2); }
+  .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+  label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .config-card { background: var(--surface); border: 1px solid var(--border); padding: 16px 20px; border-radius: 4px; margin-bottom: 14px; }
+  .config-row { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filter-bar label { margin-right: 4px; }
+  .filter-btn {
+    padding: 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    color: var(--muted);
+    letter-spacing: .5px;
+  }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    transition: all .2s;
+    border-radius: 2px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; font-weight: 500; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  .btn-secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .btn-secondary:hover { background: rgba(26,71,42,.06); }
+  .btn-warn { background: var(--warn); color: #fff; }
+  .btn-warn:hover { background: #d35400; }
+  .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); }
+  .btn-danger:hover { background: rgba(192,57,43,.06); }
+  .btn-sm { padding: 6px 12px; font-size: 10px; letter-spacing: 1px; }
+  .btn-icon { padding: 6px 8px; font-size: 12px; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: space-between; }
+  .actions-right { display: flex; gap: 10px; }
+
+  /* MESSAGES */
+  .msg { padding: 12px 16px; font-size: 13px; border-left: 3px solid; margin: 14px 0; border-radius: 0 4px 4px 0; }
+  .msg-ok { border-color: var(--ok); background: rgba(39,174,96,.06); color: #1e7a40; }
+  .msg-err { border-color: var(--error); background: rgba(192,57,43,.06); color: var(--error); }
+  .msg-info { border-color: var(--accent2); background: rgba(26,71,42,.05); color: var(--accent); }
+  .msg-warn { border-color: var(--warn); background: rgba(230,126,34,.06); color: #b26816; }
+
+  /* ROUTE CARDS */
+  .ruta-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .ruta-card .ruta-head { flex: 1; min-width: 240px; }
+  .ruta-card .ruta-nombre {
+    font-size: 14px; font-weight: 600; color: var(--accent);
+    border: none; background: transparent; padding: 4px 0;
+    font-family: inherit; width: 100%;
+  }
+  .ruta-card .ruta-nombre:focus { outline: none; border-bottom: 1px solid var(--accent2); }
+  .ruta-card .ruta-locs { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 3px; letter-spacing: .5px; }
+  .ruta-card .ruta-stats { display: flex; gap: 14px; font-size: 11px; }
+  .ruta-card .ruta-stats .st { display: flex; flex-direction: column; align-items: center; }
+  .ruta-card .ruta-stats .st b { font-family: 'DM Mono', monospace; font-size: 16px; color: var(--accent); font-weight: 500; }
+  .ruta-card .ruta-stats .st span { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+  .ruta-inputs { display: flex; gap: 10px; }
+  .ruta-inputs .field { min-width: 180px; }
+
+  .ruta-detail {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .ruta-detail-head {
+    padding: 12px 16px;
+    background: rgba(26,71,42,.04);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .ruta-detail-head h3 { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .ruta-detail-head .head-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  .localidad-block { padding: 10px 16px; border-bottom: 1px solid rgba(0,0,0,.04); }
+  .localidad-block:last-child { border-bottom: none; }
+  .localidad-block h4 { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .localidad-block .col-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 12px;
+    gap: 10px;
+  }
+  .localidad-block .col-row .col-name { flex: 1; }
+  .localidad-block .col-row select { min-width: 120px; }
+
+  /* ROUTE SUMMARY LIST */
+  .ruta-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    padding: 14px 18px;
+  }
+  .ruta-summary-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+  .ruta-summary-head h3 { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .ruta-summary-head .btn { flex-shrink: 0; }
+  .ruta-summary-info { display: flex; gap: 16px; font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; flex-wrap: wrap; }
+  .ruta-summary-info span b { color: var(--text); font-weight: 500; }
+
+  /* SETTINGS PANEL */
+  .settings-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 2px;
+  }
+  .settings-toggle:hover { background: var(--surface2); }
+
+  .hidden { display: none !important; }
+
+  /* ============ PRINT AREA ============ */
+  #print-area { display: none; }
+  @media print {
+    /* Named pages: cada tipo de página se imprime en su orientación */
+    @page portrait-page {
+      size: A4 portrait;
+      margin: 8mm 10mm;
+    }
+    @page landscape-page {
+      size: A4 landscape;
+      margin: 6mm 8mm;
+    }
+
+    body { margin: 0; padding: 0; background: #fff; }
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { display: block !important; }
+
+    .print-page {
+      page: portrait-page;
+      page-break-after: always;
+      page-break-inside: avoid;
+      width: 100%;
+      min-height: 0;
+      padding: 0;
+      margin: 0;
+      border: none;
+      box-shadow: none;
+    }
+    .print-page.landscape {
+      page: landscape-page;
+      width: 100%;
+      min-height: 0;
+    }
+    .print-page:last-child { page-break-after: auto; }
+  }
+
+  /* Vista en pantalla (preview) */
+  .print-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 8mm 10mm;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9pt;
+    color: #000;
+    background: #fff;
+    border: 1px solid #ccc;
+    margin-bottom: 8mm;
+    box-sizing: border-box;
+  }
+  .print-page.landscape {
+    width: 297mm;
+    min-height: 210mm;
+    padding: 6mm 8mm;
+  }
+
+  /* RUTERO */
+  .rut-head {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid #000;
+    margin-bottom: 6px;
+  }
+  .rut-head-logo {
+    width: 130px;
+    padding: 10px;
+    border-right: 1px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rut-head-logo .logo-box {
+    border: 2px solid #000;
+    padding: 8px 12px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    font-size: 13pt;
+  }
+  .rut-head-title {
+    flex: 1;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 14pt;
+    letter-spacing: 2px;
+    border-right: 1px solid #000;
+  }
+  .rut-head-code {
+    width: 180px;
+    font-size: 8pt;
+  }
+  .rut-head-code .code-row {
+    display: flex;
+    border-bottom: 1px solid #000;
+  }
+  .rut-head-code .code-row:last-child { border-bottom: none; }
+  .rut-head-code .code-lbl { flex: 1; padding: 3px 6px; border-right: 1px solid #000; font-weight: 700; background: #f0f0f0; }
+  .rut-head-code .code-val { flex: 1; padding: 3px 6px; text-align: right; }
+
+  .rut-info {
+    display: flex;
+    gap: 20px;
+    padding: 5px 0;
+    margin-bottom: 6px;
+    font-size: 9pt;
+    flex-wrap: wrap;
+  }
+  .rut-info .ri { display: flex; gap: 5px; }
+  .rut-info .ri b { font-weight: 700; }
+  .rut-info .ri .val { text-decoration: underline; min-width: 100px; }
+
+  .rut-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+    margin-bottom: 8px;
+  }
+  .rut-table th, .rut-table td { border: 1px solid #333; padding: 5px 5px; text-align: center; vertical-align: middle; }
+  .rut-table th { background: #d5d5d5; font-weight: 700; font-size: 8pt; }
+  .rut-table th.h-group { background: #b0b0b0; font-size: 9pt; }
+  .rut-table td.tdl { text-align: left; }
+  .rut-table td.tdr { text-align: right; }
+  .rut-table tr.total-row td { background: #f0f0f0; font-weight: 700; }
+
+  .rut-foot {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+    font-size: 9pt;
+  }
+  .rut-foot .foot-signs { flex: 2; }
+  .rut-foot .foot-signs .sign-row { display: flex; gap: 20px; margin-bottom: 4px; }
+  .rut-foot .foot-signs .sign-row .sf { display: flex; gap: 5px; align-items: baseline; }
+  .rut-foot .foot-signs .sign-row .sf .val { border-bottom: 1px solid #000; min-width: 120px; padding: 0 4px; }
+  .rut-foot .foot-totals { border: 1px solid #000; font-size: 8pt; }
+  .rut-foot .foot-totals table { border-collapse: collapse; }
+  .rut-foot .foot-totals td { border: 1px solid #000; padding: 4px 10px; text-align: center; }
+  .rut-foot .foot-totals .lbl { background: #f0f0f0; font-weight: 700; font-size: 7pt; }
+  .rut-foot .foot-totals .val { font-size: 12pt; font-weight: 700; }
+
+  .rut-lote {
+    margin-top: 8px;
+    border: 1px solid #000;
+    font-size: 8pt;
+  }
+  .rut-lote table { width: 100%; border-collapse: collapse; }
+  .rut-lote th, .rut-lote td { border: 1px solid #333; padding: 3px 6px; text-align: center; }
+  .rut-lote th { background: #d5d5d5; font-size: 7pt; font-weight: 700; }
+  .rut-lote td { min-height: 20px; height: 20px; }
+
+  /* REMISION */
+  .rem-page {
+    padding: 10mm 12mm;
+  }
+  .rem-hdr { display: flex; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px; align-items: stretch; }
+  .rem-hdr-logo { width: 130px; padding-right: 12px; display: flex; align-items: center; }
+  .rem-hdr-logo .logo-box { border: 2px solid #000; padding: 12px 8px; font-weight: 900; letter-spacing: 3px; font-size: 14pt; text-align: center; width: 100%; }
+  .rem-hdr-empresa { flex: 1; padding: 4px 12px; font-size: 9pt; }
+  .rem-hdr-empresa .he-line { padding: 2px 0; line-height: 1.35; }
+  .rem-hdr-num { width: 175px; text-align: right; font-size: 9pt; border-left: 1px solid #ccc; padding-left: 12px; }
+  .rem-hdr-num .hn-titulo { font-size: 14pt; font-weight: 900; letter-spacing: 2px; margin-bottom: 4px; }
+  .rem-hdr-num .hn-line { margin: 3px 0; }
+  .rem-hdr-num .hn-copia { margin-top: 6px; font-size: 8pt; font-weight: 600; padding: 3px 8px; display: inline-block; }
+  .rem-hdr-num .hn-copia.val { background: #eef7ea; color: #1a472a; border: 1px solid #1a472a; }
+  .rem-hdr-num .hn-copia.sinval { background: #fbeeed; color: #c0392b; border: 1px solid #c0392b; }
+
+  .rem-inst { border: 1px solid #000; padding: 8px 10px; margin-bottom: 10px; font-size: 9pt; }
+  .rem-inst > div { padding: 2px 0; }
+  .rem-inst-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 3px; }
+
+  .rem-tabla { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 10px; }
+  .rem-tabla th, .rem-tabla td { border: 1px solid #333; padding: 7px 6px; }
+  .rem-tabla th { background: #000; color: #fff; font-size: 8pt; text-align: center; }
+  .rem-tabla td.c-item { text-align: center; }
+  .rem-tabla td.c-cant { text-align: center; }
+  .rem-tabla td.c-vu, .rem-tabla td.c-vt { text-align: right; }
+  .rem-tabla tfoot td { font-weight: 700; background: #f0f0f0; }
+  .rem-tabla tfoot td.tot-lbl { text-align: center; }
+  .rem-tabla tfoot td.tot-cant { text-align: center; }
+  .rem-tabla tfoot td.tot-vt { text-align: right; }
+
+  .rem-recibi { border: 1px solid #000; padding: 10px 12px; margin-bottom: 10px; font-size: 9pt; }
+  .rr-titulo { text-align: center; font-weight: 700; font-size: 9pt; margin-bottom: 8px; }
+  .rr-metodo { margin-bottom: 10px; font-size: 8.5pt; }
+  .chk { width: 11px; height: 11px; border: 1px solid #000; display: inline-block; vertical-align: middle; margin: 0 3px; }
+  .rr-firmas { display: flex; gap: 10px; margin-top: 14px; }
+  .rr-fcell { flex: 1; text-align: center; font-size: 7.5pt; }
+  .rr-line { border-bottom: 1px solid #000; height: 42px; margin-bottom: 3px; }
+  .rr-lbl { color: #444; }
+  .rr-legal { margin-top: 10px; font-size: 7pt; color: #555; font-style: italic; }
+
+  .rem-trans { border: 1px solid #000; padding: 10px 12px; margin-bottom: 10px; font-size: 8.5pt; }
+  .rt-title { text-align: center; font-weight: 700; margin-bottom: 8px; text-decoration: underline; }
+  .rt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+  .rt-field { display: flex; gap: 5px; align-items: baseline; }
+  .rt-field label { font-weight: 700; white-space: nowrap; font-family: inherit; text-transform: none; letter-spacing: 0; font-size: 8.5pt; color: #000; }
+  .rt-line { flex: 1; border-bottom: 1px solid #000; min-width: 40px; min-height: 14px; }
+
+  .rem-obs {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: 8pt;
+    align-items: flex-end;
+  }
+  .rem-obs .obs-left { flex: 1; }
+  .rem-obs .obs-left b { font-weight: 700; }
+  .rem-obs .obs-note { border: 1px solid #000; padding: 7px 8px; margin-top: 6px; font-size: 8pt; font-weight: 600; }
+  .rem-obs .obs-sign { width: 140px; text-align: center; font-size: 8pt; }
+  .rem-obs .obs-sign .sl { border-bottom: 1px solid #000; height: 34px; margin-bottom: 3px; }
+
+  /* PRINT MODAL PREVIEW */
+  .preview-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    margin-bottom: 16px;
+  }
+  .preview-toolbar .pt-title { font-size: 13px; font-family: 'DM Mono', monospace; letter-spacing: 1px; }
+  .preview-toolbar .pt-actions { display: flex; gap: 8px; }
+  .preview-toolbar button {
+    background: #fff;
+    color: var(--accent);
+    border: none;
+    padding: 8px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    font-weight: 500;
+  }
+  .preview-toolbar button.secondary { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); }
+  .preview-toolbar button:hover { opacity: .9; }
+
+  #preview-mount { padding: 0 20px; background: #e5e5e5; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-block">
+    <div class="logo-text">ALINNOVA</div>
+    <div class="logo-sub">S.A.S · NIT 901.015.983-9</div>
+  </div>
+  <div class="header-title">
+    <h1>Logística — Panadería</h1>
+    <p>Generador de Remisiones y Ruteros por Ruta</p>
+  </div>
+  <div class="header-badge">PROTOTIPO v1</div>
+</header>
+
+<main id="main-view">
+  <div class="steps">
+    <div class="step active" data-step="1"><span class="step-num">1</span> Cargar OC</div>
+    <div class="step" data-step="2"><span class="step-num">2</span> Seleccionar OC</div>
+    <div class="step" data-step="3"><span class="step-num">3</span> Productos</div>
+    <div class="step" data-step="4"><span class="step-num">4</span> Zonas y Rutas</div>
+    <div class="step" data-step="5"><span class="step-num">5</span> Distribuir</div>
+    <div class="step" data-step="6"><span class="step-num">6</span> Conductores</div>
+    <div class="step" data-step="7"><span class="step-num">7</span> Generar</div>
+  </div>
+
+  <!-- ============================== PANEL 1: UPLOAD ============================== -->
+  <div id="panel-1" class="panel">
+    <div class="section-title">Archivo de Detalle de Entrega del cliente</div>
+    <div class="upload-zone" id="dropzone">
+      <input type="file" id="file-input" accept=".xlsx,.xls,.xlsm">
+      <div class="upload-icon">🥖</div>
+      <h2>Arrastra el Excel de OC de Panadería aquí</h2>
+      <p>Formato: hoja "Sheet1" con columnas Punto · Numero OC · Nombre_Bodega · Articulo · Nombre · Cantidad · Localidad</p>
+    </div>
+    <div id="upload-msg"></div>
+    <div class="msg msg-info" style="margin-top:14px">
+      <b>Prototipo:</b> incluye pre-cargados 15 productos maestros (nombre, embalaje, precio) y el directorio de 240 colegios (dirección, sitio de entrega). En la app final se conectan a <span class="mono">logistica_productos</span> y <span class="mono">logistica_sitios</span>.
+      <span class="settings-toggle" onclick="openMaestra()" style="margin-left:12px">⚙ Editar productos maestros</span>
+    </div>
+  </div>
+
+  <!-- ============================== PANEL 2: SELECCIONAR OCs ============================== -->
+  <div id="panel-2" class="panel hidden">
+    <div class="section-title">Órdenes de compra detectadas</div>
+    <div id="ocs-info"></div>
+    <div class="cards-grid" id="ocs-grid"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="gotoStep(1)">← Cargar otro archivo</button>
+      <button class="btn btn-primary" onclick="confirmOcs()">Continuar con OCs seleccionadas →</button>
+    </div>
+  </div>
+
+  <!-- ============================== PANEL 3: PRODUCTOS ============================== -->
+  <div id="panel-3" class="panel hidden">
+    <div class="section-title">Productos en las OCs seleccionadas</div>
+    <div class="stats-row" id="prod-stats"></div>
+    <div id="prod-warn"></div>
+    <div class="table-wrap">
+      <div class="filter-bar">
+        <label>LÍNEA:</label>
+        <button class="filter-btn active" data-linea="ALL">Todas</button>
+        <button class="filter-btn" data-linea="PANADERIA">Panadería</button>
+        <button class="filter-btn" data-linea="GASTRONOMIA">Gastronomía</button>
+        <button class="filter-btn" data-linea="ENSAMBLE">Ensamble</button>
+        <button class="filter-btn" data-linea="OTRO">Sin línea</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-sm btn-secondary" onclick="openMaestra()">⚙ Editar embalaje / precio</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleAllProductos(true)">Marcar visibles</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleAllProductos(false)">Desmarcar visibles</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="chk-cell"></th>
+              <th>Producto</th>
+              <th>Código SAP</th>
+              <th style="text-align:center">Línea</th>
+              <th class="num">Cantidad</th>
+              <th class="num">Emb.</th>
+              <th class="num">Canastillas</th>
+              <th class="num">Sueltas</th>
+              <th class="num">Colegios</th>
+            </tr>
+          </thead>
+          <tbody id="prod-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="gotoStep(2)">← OCs</button>
+      <button class="btn btn-primary" onclick="confirmProductos()">Continuar con productos seleccionados →</button>
+    </div>
+  </div>
+
+  <!-- ============================== PANEL 4: ZONAS Y RUTAS ============================== -->
+  <div id="panel-4" class="panel hidden">
+    <div class="section-title">Localidades y armado de rutas</div>
+    <div class="stats-row" id="zone-stats"></div>
+    <div id="zone-warn"></div>
+    <div class="table-wrap">
+      <div class="table-header">
+        <span>Marca las localidades que van a despacho hoy. Ajusta cuántos carros necesita cada una.</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-secondary" onclick="toggleAllZonas(true)">Marcar todas</button>
+          <button class="btn btn-sm btn-secondary" onclick="toggleAllZonas(false)">Desmarcar</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="chk-cell"></th>
+              <th>Localidad</th>
+              <th class="num">Ptos entrega</th>
+              <th class="num">Unidades</th>
+              <th class="num">Canastillas</th>
+              <th style="width:120px;text-align:center">Rutas</th>
+              <th style="text-align:center">Agrupar</th>
+            </tr>
+          </thead>
+          <tbody id="zone-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-title">Rutas armadas</div>
+    <div id="rutas-preview"></div>
+    <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap">
+      <button class="btn btn-sm btn-secondary" onclick="agruparSeleccionadas()">➕ Agrupar localidades marcadas "para agrupar" en 1 ruta</button>
+      <button class="btn btn-sm btn-secondary" onclick="reiniciarRutas()">↻ Reiniciar rutas</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="gotoStep(3)">← Productos</button>
+      <button class="btn btn-primary" onclick="confirmZonas()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- ============================== PANEL 5: DISTRIBUIR ============================== -->
+  <div id="panel-5" class="panel hidden">
+    <div class="section-title">Distribuir colegios entre subrutas</div>
+    <div class="msg msg-info">Las localidades que definiste con más de 1 ruta necesitan que asignes cada colegio a una subruta específica.</div>
+    <div id="distribuir-body"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="gotoStep(4)">← Zonas y Rutas</button>
+      <button class="btn btn-primary" onclick="confirmDistribucion()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- ============================== PANEL 6: CONDUCTORES ============================== -->
+  <div id="panel-6" class="panel hidden">
+    <div class="section-title">Asignar conductor y placa por ruta</div>
+    <div id="conductores-body"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="gotoStep(5)">← Distribuir</button>
+      <button class="btn btn-primary" onclick="confirmConductores()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- ============================== PANEL 7: GENERAR ============================== -->
+  <div id="panel-7" class="panel hidden">
+    <div class="section-title">Parámetros generales</div>
+    <div class="config-card">
+      <div class="config-row">
+        <div class="field">
+          <label>Número inicial de remisión</label>
+          <input type="number" id="cfg-nro" value="1" min="1">
+        </div>
+        <div class="field">
+          <label>Fecha de emisión</label>
+          <input type="date" id="cfg-emision">
+        </div>
+        <div class="field">
+          <label>Fecha de entrega</label>
+          <input type="date" id="cfg-entrega">
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Rutas listas para generar</div>
+    <div id="rutas-final"></div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="gotoStep(6)">← Conductores</button>
+      <div class="actions-right">
+        <button class="btn btn-secondary" onclick="reiniciarTodo()">↻ Nueva OC</button>
+        <button class="btn btn-primary" onclick="verTodasRutas()">🖨 Ver / Imprimir TODAS las rutas</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============================== PREVIEW MOUNT ============================== -->
+<div id="preview-view" class="hidden">
+  <div class="preview-toolbar">
+    <div class="pt-title" id="preview-title">Vista previa</div>
+    <div class="pt-actions">
+      <button class="secondary" onclick="closePreview()">← Volver</button>
+      <button onclick="window.print()">🖨 Imprimir</button>
+    </div>
+  </div>
+  <div id="preview-mount"></div>
+</div>
+
+<!-- ============================== PRINT AREA ============================== -->
+<div id="print-area"></div>
+
+<!-- ============================== MAESTRA MODAL ============================== -->
+<div id="maestra-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:6px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <h3 style="font-size:15px;color:var(--accent)">Data Maestra de Productos</h3>
+      <button onclick="closeMaestra()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div style="padding:12px 20px;overflow-y:auto;flex:1">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Ajusta el <b>embalaje por canastilla</b> y el <b>precio unitario</b> de cada producto. Los cambios se aplican de inmediato a los cálculos y a los documentos generados.
+        En la app final estos valores vienen de <span class="mono">logistica_productos</span> en Supabase.
+      </p>
+      <table style="width:100%;font-size:12px">
+        <thead>
+          <tr>
+            <th>Código SAP</th>
+            <th>Nombre</th>
+            <th style="text-align:center">Línea</th>
+            <th class="num">Embalaje</th>
+            <th class="num">Precio (COP)</th>
+          </tr>
+        </thead>
+        <tbody id="maestra-tbody"></tbody>
+      </table>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-secondary btn-sm" onclick="closeMaestra()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================================================
+// DATA MAESTRA DE PRODUCTOS (hardcoded en prototipo, viene de logistica_productos en app)
+// =====================================================================================
+const PRODUCTOS_MAESTRA = {
+  '29639025034': { nombre: 'PAN DE BONO 30G-UN-SANTINO',           embalaje: 90,  precio: 1008,  linea: 'PANADERIA' },
+  '29639025035': { nombre: 'PAN DE BONO 40G-UN-SANTINO',           embalaje: 90,  precio: 1344,  linea: 'PANADERIA' },
+  '29639025037': { nombre: 'PAN DE BONO 60G-UN-SANTINO',           embalaje: 90,  precio: 2016,  linea: 'PANADERIA' },
+  '29639025038': { nombre: 'PAN DE BONO 70G-UN-SANTINO',           embalaje: 90,  precio: 2352,  linea: 'PANADERIA' },
+  '29643000098': { nombre: 'PAN DE BONO 30G-PQX20UN-SANTINO',      embalaje: 60,  precio: 20160, linea: 'PANADERIA' },
+  '29643000101': { nombre: 'PAN DE BONO 70G-PQX20UN-SANTINO',      embalaje: 60,  precio: 47040, linea: 'PANADERIA' },
+  '29639041029': { nombre: 'HOJALDRE QUESO Y BOCADILLO 87G-UN-CC', embalaje: 60,  precio: 3200,  linea: 'PANADERIA' },
+  '29639041039': { nombre: 'HOJALDRE QUESO Y BOCADILLO 97G-UN-CC', embalaje: 60,  precio: 3500,  linea: 'PANADERIA' },
+  '29639050218': { nombre: 'MUFFIN SABOR QUESO 15G-UN',            embalaje: 100, precio: 600,   linea: 'PANADERIA' },
+  '29639050219': { nombre: 'MUFFIN SABOR QUESO 40G-UN',            embalaje: 100, precio: 1500,  linea: 'PANADERIA' },
+  '29639050222': { nombre: 'MUFFIN CON SABOR A QUESO 50G-UN',      embalaje: 100, precio: 1800,  linea: 'PANADERIA' },
+  '29639004937': { nombre: 'CROISSANT SIN RELLENO X20G-UN',        embalaje: 100, precio: 800,   linea: 'PANADERIA' },
+  '29616003013': { nombre: 'FRIJOL PRECOCIDO-BOLX1000G-ALINNOVA',  embalaje: 15,  precio: 21990, linea: 'GASTRONOMIA' },
+  '29637001020': { nombre: 'REFRIGERIO REFORZADO TIPO A',          embalaje: 60,  precio: 6405,  linea: 'ENSAMBLE' },
+  '29637001021': { nombre: 'REFRIGERIO REFORZADO TIPO B',          embalaje: 60,  precio: 6405,  linea: 'ENSAMBLE' },
+};
+
+// =====================================================================================
+// DIRECTORIO DE COLEGIOS (hardcoded en prototipo, viene de logistica_sitios en app)
+// =====================================================================================
+const DIRECTORIO_COLEGIOS = {
+  '2001': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)6", sitio_entrega: "CENT EDUC DIST RURAL ADELINA GUTIERREZ PALACIOS", localidad: "SUMAPAZ", direccion: "VEREDA BETANIA" },
+  '2002': { nombre: "COLEGIO AGUSTIN FERNANDEZ (IED)1", sitio_entrega: "COL DIST EDUC BAS Y MEDIA AGUSTIN FERNANDEZ", localidad: "USAQUEN", direccion: "CARRERA 7 # 155 - 20" },
+  '2004': { nombre: "COLEGIO TECNICO ALDEMAR ROJAS PLAZAS (IED)1", sitio_entrega: "ALDEMAR ROJAS PLAZAS", localidad: "SAN CRISTOBAL", direccion: "CARRERA 10 # 13 - 52 SUR" },
+  '2005': { nombre: "COLEGIO ALFONSO LOPEZ MICHELSEN (IED)1", sitio_entrega: "ALFONSO LÒPEZ MICHELSEN (PUERTA DEL SOL INST EDUC DIST)", localidad: "BOSA", direccion: "CARRERA 98 B # 74 - 68 SUR" },
+  '2006': { nombre: "COLEGIO ALFONSO REYES ECHANDIA (IED)1", sitio_entrega: "ALFONSO REYES ECHANDIA (INST EDUC DIST)", localidad: "BOSA", direccion: "CARRERA 86 # 74 - 00 SUR" },
+  '2007': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)10", sitio_entrega: "CENT EDUC DIST RURAL LAS ANIMAS", localidad: "SUMAPAZ", direccion: "VEREDA ANIMAS" },
+  '2008': { nombre: "COLEGIO LICEO NACIONAL ANTONIA SANTOS (IED)1", sitio_entrega: "LICEO NAL EDUC BAS Y MEDIA ANTONIA SANTOS", localidad: "LOS MARTIRES", direccion: "CARRERA 22 # 12 - 49" },
+  '2009': { nombre: "COLEGIO ANTONIO GARCIA (IED)1", sitio_entrega: "COL ANTONIO GARCIA (INS EDUC DIST)", localidad: "CIUDAD BOLIVAR", direccion: "CARRERA 17 F # 73 A - 31 SUR" },
+  '2010': { nombre: "COLEGIO ANTONIO JOSE URIBE (IED)1", sitio_entrega: "COL DIST ANTONIO JOSE URIBE", localidad: "SANTAFE", direccion: "CALLE 3 # 9 - 70" },
+  '2011': { nombre: "COLEGIO AQUILEO PARRA (IED)1", sitio_entrega: "INST DIST EDUC BAS Y TECNICA AQUILEO PARRA", localidad: "USAQUEN", direccion: "CARRERA 18 A # 187 - 75" },
+  '2012': { nombre: "COLEGIO ATANASIO GIRARDOT (IED)1", sitio_entrega: "COL DIST EDUC BAS Y MEDIA ATANASIO GIRARDOT", localidad: "ANTONIO NARIÑO", direccion: "CALLE 14 SUR # 28 - 06" },
+  '2013': { nombre: "COLEGIO AULAS COLOMBIANAS SAN LUIS (IED)1", sitio_entrega: "CENT EDUC DIST AULAS COLOMBIANAS EL CONSUELO", localidad: "SANTAFE", direccion: "CARRERA 11 ESTE # 1 A - 85" },
+  '2014': { nombre: "COLEGIO BELLAVISTA (IED)1", sitio_entrega: "COLEGIO BELLAVISTA (IED)", localidad: "KENNEDY", direccion: "CALLE 40 SUR # 94 C - 50" },
+  '2015': { nombre: "COLEGIO TECNICO BENJAMIN HERRERA (IED)2", sitio_entrega: "CENT EDUC DIST REP DE FRANCIA", localidad: "PUENTE ARANDA", direccion: "CARRERA 51 C # 33 - 41 SUR - CARRERA 51 C # 33 - 37 SUR - CARRERA 51 C # 34 - 07 SUR" },
+  '2016': { nombre: "COLEGIO BERNARDO JARAMILLO (IED)1", sitio_entrega: "CENT EDUC DIST BERNARDO JARAMILLO", localidad: "TUNJUELITO", direccion: "DIAGONAL 47 SUR # 19 B - 19" },
+  '2017': { nombre: "COLEGIO EL TESORO DE LA CUMBRE (IED)3", sitio_entrega: "SEDE C (LUCERO ALTO - EL TESORO)", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 81 SUR # 18 P - 08" },
+  '2018': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)14", sitio_entrega: "CENT EDUC DIST RURAL EL CAPITOLIO", localidad: "SUMAPAZ", direccion: "VEREDA CAPITOLIO" },
+  '2019': { nombre: "COLEGIO CARLO FEDERICI (IED)1", sitio_entrega: "COL CARLO FEDERICI (INST EDUC DIST)", localidad: "FONTIBON", direccion: "CALLE 14 A # 108 - 78" },
+  '2020': { nombre: "COLEGIO CARLOS PIZARRO LEON GOMEZ (IED)1", sitio_entrega: "CARLOS PIZARRO LEON GOMEZ (INST EDUC DIST)", localidad: "BOSA", direccion: "CALLE 72 SUR # 100 A - 71" },
+  '2021': { nombre: "COLEGIO CEDID CIUDAD BOLIVAR (IED)1", sitio_entrega: "CEDID CIUDAD BOLIVAR", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 70 SUR # 56 - 11" },
+  '2022': { nombre: "COLEGIO CHARRY (IED)1", sitio_entrega: "COLEGIO CHARRY (IED) - SEDE PRINCIPAL", localidad: "ENGATIVA", direccion: "CARRERA 109 A # 77 A - 16" },
+  '2023': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)8", sitio_entrega: "CENT EDUC DIST RURAL LAS CHORRERAS", localidad: "SUMAPAZ", direccion: "VEREDA CHORRERAS" },
+  '2024': { nombre: "COLEGIO CHUNIZA FAMACO (IED)1", sitio_entrega: "COLEGIO CHUNIZA FAMACO (IED)", localidad: "USME", direccion: "AVENIDA CALLE 91 SUR # 4 - 22 ESTE" },
+  '2025': { nombre: "COLEGIO CIUDAD DE VILLAVICENCIO (IED)1", sitio_entrega: "CIUDAD DE VILLAVICENCIO", localidad: "USME", direccion: "CARRERA 6 H ESTE # 114 - 88 SUR" },
+  '2026': { nombre: "COLEGIO CIUDADELA EDUCATIVA DE BOSA (IED)1", sitio_entrega: "COL CUIDADELA EDUCATIVA BOSA (INS EDUC DIST)", localidad: "BOSA", direccion: "CALLE 52 SUR # 97 C - 35" },
+  '2027': { nombre: "COLEGIO CLEMENCIA HOLGUIN DE URDANETA (IED)1", sitio_entrega: "CENT EDUC DIST CLEMENCIA HOLGUIN DE URDANETA", localidad: "RAFAEL URIBE URIBE", direccion: "CALLE 30 SUR # 18 - 25" },
+  '2028': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)6", sitio_entrega: "CENT EDUC DIST RURAL LA CONCEPCION", localidad: "SUMAPAZ", direccion: "VEREDA LA CONCEPCION" },
+  '2029': { nombre: "COLEGIO CRISTOBAL COLON (IED)1", sitio_entrega: "COL DIST CRISTOBAL COLON (SERVITA)", localidad: "USAQUEN", direccion: "CALLE 165 # 8 A - 03" },
+  '2030': { nombre: "COLEGIO DE CULTURA POPULAR (IED)1", sitio_entrega: "INST NAL DE CULTURA POPULAR", localidad: "PUENTE ARANDA", direccion: "CARRERA 51 # 16 - 64 SUR" },
+  '2031': { nombre: "COLEGIO CUNDINAMARCA (IED)1", sitio_entrega: "COL CUNDINAMARCA (INS EDUC DIST)", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 60 A SUR # 73 - 41" },
+  '2032': { nombre: "COLEGIO DARIO ECHANDIA (IED)1", sitio_entrega: "COL DIST DARIO ECHANDIA", localidad: "KENNEDY", direccion: "CALLE 5 A SUR # 88 B - 08" },
+  '2033': { nombre: "COLEGIO DEBORA ARANGO PEREZ (IED)1", sitio_entrega: "COLEGIO DEBORA ARANGO PÉREZ", localidad: "BOSA", direccion: "CARRERA 84 A # 57 B - 04 SUR" },
+  '2034': { nombre: "COLEGIO DELIA ZAPATA OLIVELLA (IED)1", sitio_entrega: "DELIA ZAPATA OLIVELLA", localidad: "SUBA", direccion: "CALLE 144 C # 141 A - 51" },
+  '2035': { nombre: "COLEGIO DIVINO MAESTRO (IED)3", sitio_entrega: "CENT EDUC DIST SAN CRISTOBAL NORTE", localidad: "USAQUEN", direccion: "CARRERA 7 D # 163 A - 56" },
+  '2036': { nombre: "COLEGIO EDUARDO UMAÑA LUNA (IED)1", sitio_entrega: "COLEGIO EDUARDO UMAÑA LUNA INSTITUCION EDUCATIVA DISTRITAL - SEDE PRINCIPAL", localidad: "KENNEDY", direccion: "CARRERA 93 A # 42 A - 37 SUR" },
+  '2037': { nombre: "COLEGIO EDUARDO UMAÑA MENDOZA (IED)1", sitio_entrega: "INST EDUC DIST EDUARDO UMAÑA MENDOZA - SEDE PRINCIPAL", localidad: "USME", direccion: "CALLE 111 A BIS SUR # 4 A - 41 ESTE" },
+  '2038': { nombre: "COLEGIO EL DESTINO (IED)1", sitio_entrega: "CENT EDUC DIST RURAL EL DESTINO", localidad: "USME", direccion: "KILOMETRO 8 VIA SAN JUAN DE SUMAPAZ" },
+  '2040': { nombre: "COLEGIO EL MINUTO DE BUENOS AIRES (IED)2", sitio_entrega: "CENT EDUC DIST MINUTO DE MARIA", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 80 A SUR # 17 N - 80" },
+  '2041': { nombre: "COLEGIO EL PORVENIR (IED)1", sitio_entrega: "CENT EDUC DIST EL PORVENIR", localidad: "BOSA", direccion: "CALLE 51 SUR # 91 D - 56" },
+  '2042': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)2", sitio_entrega: "CENT EDU DIST RURAL EL RAIZAL", localidad: "SUMAPAZ", direccion: "VEREDA RAIZAL" },
+  '2043': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)4", sitio_entrega: "CENT EDUC DIST RURAL EL TABACO", localidad: "SUMAPAZ", direccion: "VEREDA EL TABACO" },
+  '2044': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)9", sitio_entrega: "CENT EDUC DIST RURAL ERASMO VALENCIA", localidad: "SUMAPAZ", direccion: "VEREDA LAS VEGAS" },
+  '2045': { nombre: "COLEGIO FANNY MIKEY (IED)1", sitio_entrega: "COLEGIO FANNY MIKEY (IED) - SEDE PRINCIPAL", localidad: "CIUDAD BOLIVAR", direccion: "CARRERA 18 N # 70 A - 05 SUR" },
+  '2046': { nombre: "COLEGIO FERNANDO GONZALEZ OCHOA (IED)1", sitio_entrega: "COLEGIO FERNANDO GONZALEZ OCHOA", localidad: "USME", direccion: "CARRERA 4 D ESTE # 89 - 55 SUR" },
+  '2047': { nombre: "COLEGIO FERNANDO MAZUERA VILLEGAS (IED)1", sitio_entrega: "COL DIST FERNANDO MAZUERA VILLEGAS", localidad: "BOSA", direccion: "CALLE 68 A SUR # 80 H - 05" },
+  '2048': { nombre: "COLEGIO FRANCISCO ANTONIO ZEA DE USME (IED)1", sitio_entrega: "COL DIST DE USME", localidad: "USME", direccion: "TRANSVERSAL 2 A # 135 - 78 SUR" },
+  '2049': { nombre: "COLEGIO FRANCISCO DE MIRANDA (IED)1", sitio_entrega: "CENT EDUC DIST FRANCISCO DE MIRANDA", localidad: "KENNEDY", direccion: "DIAGONAL 41 SUR # 73 A - 80" },
+  '2050': { nombre: "COLEGIO FRIEDRICH NAUMANN (IED)1", sitio_entrega: "CENT EDUC DIST FRIEDRICH NAUMANN", localidad: "USAQUEN", direccion: "CALLE 171 A # 6 A 26" },
+  '2051': { nombre: "COLEGIO GABRIEL BETANCOURT MEJIA (IED)1", sitio_entrega: "COL GABRIEL BETANCOURT MEJIA (INST EDUC DIST)", localidad: "KENNEDY", direccion: "CARRERA 87 A # 6 A - 23" },
+  '2052': { nombre: "COLEGIO GABRIEL GARCIA MARQUEZ (IED)1", sitio_entrega: "COLEGIO GABRIEL GARCIA MARQUEZ (IED)", localidad: "USME", direccion: "CALLE 83 SUR # 13 - 33 ESTE" },
+  '2053': { nombre: "COLEGIO GENERAL SANTANDER (IED)1", sitio_entrega: "CENT EDUC DIST GENERAL SANTANDER", localidad: "ENGATIVA", direccion: "CARRERA 123 # 65 A - 03" },
+  '2054': { nombre: "COLEGIO GERARDO MOLINA RAMIREZ (IED)1", sitio_entrega: "GERARDO MOLINA RAMIREZ (INST EDUC DIST)", localidad: "SUBA", direccion: "CARRERA 143 # 142 A - 62" },
+  '2055': { nombre: "COLEGIO GERMAN ARCINIEGAS (IED)1", sitio_entrega: "COL GERMÀN ARCINIEGAS (INS EDUC DIST)", localidad: "BOSA", direccion: "CARRERA 88 I # 54 B - 44 SUR" },
+  '2056': { nombre: "COLEGIO GIMNASIO SABIO CALDAS (IED)1", sitio_entrega: "COLEGIO GIMNASIO SABIO CALDAS (IED)", localidad: "CIUDAD BOLIVAR", direccion: "CARRERA 47 # 72 C - 24 SUR" },
+  '2057': { nombre: "COLEGIO GONZALO ARANGO (IED)1", sitio_entrega: "GONZALO ARANGO (INST EDUC DIST)", localidad: "SUBA", direccion: "CALLE 130 C # 97 - 71" },
+  '2058': { nombre: "COLEGIO GRAN YOMASA (IED)1", sitio_entrega: "CENT EDUC DIST GRAN YOMASA", localidad: "USME", direccion: "CALLE 81 C SUR # 2 BIS - 00 ESTE" },
+  '2059': { nombre: "COLEGIO TECNICO CEDID GUILLERMO CANO ISAZA (IED)1", sitio_entrega: "CEDID GUILLERMO CANO ISAZA", localidad: "CIUDAD BOLIVAR", direccion: "CARRERA 16 C # 62 - 35 SUR" },
+  '2060': { nombre: "COLEGIO GUSTAVO RESTREPO (IED)1", sitio_entrega: "COL DIST GUSTAVO RESTREPO", localidad: "RAFAEL URIBE URIBE", direccion: "KR 12H BIS NO. 28 C 24 SUR" },
+  '2061': { nombre: "COLEGIO GENERAL GUSTAVO ROJAS PINILLA (IED)1", sitio_entrega: "COL GENERAL GUSTAVO ROJAS PINILLA", localidad: "KENNEDY", direccion: "CALLE 11 B # 80 B - 61" },
+  '2062': { nombre: "COLEGIO INEM SANTIAGO PEREZ (IED)1", sitio_entrega: "INEM SANTIAGO PEREZ", localidad: "TUNJUELITO", direccion: "CARRERA 24 # 49 - 86 SUR" },
+  '2063': { nombre: "COLEGIO JACKELINE (IED)1", sitio_entrega: "JACKELINE", localidad: "KENNEDY", direccion: "CALLE 45 A SUR # 77 Q - 49" },
+  '2064': { nombre: "COLEGIO JOHN F. KENNEDY (IED)1", sitio_entrega: "COL DIST EDUC BAS Y MEDIA JOHN F KENNEDY", localidad: "KENNEDY", direccion: "CARRERA 74 B # 38 A - 33 SUR" },
+  '2065': { nombre: "COLEGIO JORGE ELIECER GAITAN (IED)2", sitio_entrega: "CENT EDUC DIST MANUEL MURILLO TORO", localidad: "BARRIOS UNIDOS", direccion: "CARRERA 58 # 71 - 89" },
+  '2066': { nombre: "COLEGIO FILARMONICO JORGE MARIO BERGOGLIO (IED)1", sitio_entrega: "COLEGIO FILARMONICO JORGE MARIO BERGOGLIO (IED) - SEDE PRINCIPAL", localidad: "SUBA", direccion: "CARRERA 113 C NO 142B - 21" },
+  '2067': { nombre: "COLEGIO JORGE SOTO DEL CORRAL (IED)1", sitio_entrega: "COL DIST JORGE SOTO DEL CORRAL", localidad: "SANTAFE", direccion: "CALLE 3 # 2 - 64 ESTE" },
+  '2068': { nombre: "COLEGIO RURAL JOSE CELESTINO MUTIS (IED)1", sitio_entrega: "COLEGIO RURAL JOSÉ CELESTINO MUTIS (IED) - SEDE PRINCIPAL", localidad: "CIUDAD BOLIVAR", direccion: "KILOMETRO 10 VIA QUIBA LOTE EL CALLEAVEL" },
+  '2069': { nombre: "COLEGIO JOSE FRANCISCO SOCARRAS (IED)1", sitio_entrega: "COLEGIO JOSÉ FRANCISCO SOCARRAS (IED) - SEDE PRINCIPAL", localidad: "BOSA", direccion: "CARRERA 88 C # 66 A - 03 SUR" },
+  '2070': { nombre: "COLEGIO JOSE JAIME ROJAS (IED)1", sitio_entrega: "COLEGIO JOSE JAIME ROJAS (IED) - SEDE PRINCIPAL", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 77 A SUR # 18 M - 79" },
+  '2071': { nombre: "COLEGIO JOSE MARIA VARGAS VILA (IED)1", sitio_entrega: "COL JOSE MARIA VARGAS VILA (INS EDUC DIST)", localidad: "CIUDAD BOLIVAR", direccion: "DIAGONAL 74 B BIS SUR # 26 C - 12" },
+  '2072': { nombre: "COLEGIO JOSE MARTI (IED)1", sitio_entrega: "COL DIST LUIS LOPEZ DE MESA", localidad: "RAFAEL URIBE URIBE", direccion: "DIAGONAL 32 A SUR # 14 A - 97" },
+  '2073': { nombre: "COLEGIO JUANA ESCOBAR (IED)1", sitio_entrega: "CENT EDUC DIST JUANA ESCOBAR", localidad: "SAN CRISTOBAL", direccion: "CARRERA 15 A ESTE # 57 A SUR - 16" },
+  '2074': { nombre: "COLEGIO INSTITUTO TECNICO DISTRITAL JULIO FLOREZ (IED)2", sitio_entrega: "CENT EDUC DIST JULIO FLOREZ", localidad: "SUBA", direccion: "CARRERA 68 B # 94 - 12" },
+  '2075': { nombre: "COLEGIO KENNEDY (IED)1", sitio_entrega: "COL DIST KENNEDY", localidad: "KENNEDY", direccion: "CALLE 5 SUR # 72 A - 69" },
+  '2076': { nombre: "COLEGIO KIMI PERNIA DOMICO (IED)1", sitio_entrega: "COLEGIO KIMI PERNIA DOMICO", localidad: "BOSA", direccion: "CALLE 82 SUR # 89 - 21" },
+  '2077': { nombre: "COLEGIO LA ESPERANZA (IED)1", sitio_entrega: "COLEGIO LA ESPERANZA (IED)", localidad: "BOSA", direccion: "CALLE 77 A SUR # 86 - 40" },
+  '2078': { nombre: "COLEGIO LA ESTANCIA - SAN ISIDRO LABRADOR (IED)1", sitio_entrega: "COL DIST LA ESTANCIA", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 59 A SUR # 75 B - 75" },
+  '2079': { nombre: "COLEGIO LA FELICIDAD (IED)1", sitio_entrega: "COLEGIO LA FELICIDAD (IED) - SEDE PRINCIPAL", localidad: "FONTIBON", direccion: "CALLE 19 NO 79 - 37" },
+  '2080': { nombre: "COLEGIO LA PALESTINA (IED)1", sitio_entrega: "CENT EDUC DIST CENTRO DE ESTUDIOS DEL NIÑO", localidad: "ENGATIVA", direccion: "CARRERA 76 # 79 - 40" },
+  '2081': { nombre: "COLEGIO LA PALESTINA (IED)2", sitio_entrega: "CENT EDUC DIST LA PALESTINA", localidad: "ENGATIVA", direccion: "TRANSVERSAL 77 # 81 B - 91" },
+  '2082': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)1", sitio_entrega: "CENT EDUC DIST RURAL U.B UNION", localidad: "SUMAPAZ", direccion: "VEREDA LA UNION" },
+  '2083': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)4", sitio_entrega: "CENT EDUC DIST RURAL LAGUNITAS", localidad: "SUMAPAZ", direccion: "VEREDA LAGUNITAS" },
+  '2084': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)1", sitio_entrega: "CENT EDUC DIST RURAL U.B LAS AURAS", localidad: "SUMAPAZ", direccion: "VEREDA LAS AURAS" },
+  '2085': { nombre: "COLEGIO LEONARDO POSADA PEDRAZA (IED)1", sitio_entrega: "INST EDUC DIST LEONARDO POSADA PEDRAZA - SEDE PRINCIPAL", localidad: "BOSA", direccion: "CARRERA 92 # 72 - 42 SUR" },
+  '2086': { nombre: "COLEGIO LOS ALPES (IED)1", sitio_entrega: "COL DIST EDUC BAS Y MEDIA LOS ALPES", localidad: "SAN CRISTOBAL", direccion: "CARRERA 11 ESTE #33A SUR-62 A, DG. 33A SUR #2" },
+  '2087': { nombre: "COLEGIO LOS NARANJOS (IED)1", sitio_entrega: "COLEGIO LOS NARANJOS (IED)", localidad: "BOSA", direccion: "CARRERA 80 M # 71 C - 31 SUR" },
+  '2088': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)13", sitio_entrega: "CENT EDUC DIST RURAL LOS RIOS", localidad: "SUMAPAZ", direccion: "VEREDA LOS RIOS" },
+  '2089': { nombre: "COLEGIO LUIS LOPEZ DE MESA (IED)1", sitio_entrega: "CENT EDUC DIST LUIS LOPEZ DE MESA", localidad: "BOSA", direccion: "CALLE 65 H SUR # 78 A - 03" },
+  '2090': { nombre: "COLEGIO MAGDALENA ORTEGA DE NARIÑO (IED)1", sitio_entrega: "LICEO NAL MAGDALENA ORTEGA DE NARIÑO", localidad: "ENGATIVA", direccion: "CARRERA 69 B # 78 A - 34" },
+  '2091': { nombre: "COLEGIO MANUEL CEPEDA VARGAS (IED)1", sitio_entrega: "COLEGIO MANUEL CEPEDA VARGAS (IED) - SEDE PRINCIPAL", localidad: "KENNEDY", direccion: "CALLE 56 SUR # 81 - 26" },
+  '2092': { nombre: "COLEGIO MANUEL DEL SOCORRO RODRIGUEZ (IED)1", sitio_entrega: "CENT EDUC DIST MANUEL DEL SOCORRO RODRIGUEZ", localidad: "RAFAEL URIBE URIBE", direccion: "TRANSVERSAL 23 # 44 A - 28 SUR" },
+  '2093': { nombre: "COLEGIO MARIA CANO (IED)1", sitio_entrega: "COLEGIO MARIA CANO (IED)", localidad: "RAFAEL URIBE URIBE", direccion: "TRANSVERSAL 5 U # 48 J -30 SUR" },
+  '2094': { nombre: "COLEGIO MARIA MERCEDES CARRANZA (IED)1", sitio_entrega: "COLEGIO MARIA MERCEDES CARRANZA (I.E.D)", localidad: "CIUDAD BOLIVAR", direccion: "TRANSVERSAL 70 G # 65 - 02 SUR" },
+  '2095': { nombre: "COLEGIO ESCUELA NORMAL SUPERIOR DISTRITAL MARIA MONTESSORI (IED)2", sitio_entrega: "ESC NORMAL SUPERIOR DIST MARIA MONTESSORI Y ANEXA", localidad: "ANTONIO NARIÑO", direccion: "CALLE 10 SUR # 13 - 27" },
+  '2096': { nombre: "COLEGIO MIGUEL DE CERVANTES SAAVEDRA (IED)1", sitio_entrega: "CENT EDUC DIST MIGUEL DE CERVANTES SAAVEDRA", localidad: "USME", direccion: "CARRERA 1 A # 76 BIS - 15 SUR" },
+  '2097': { nombre: "COLEGIO NACIONES UNIDAS (IED)1", sitio_entrega: "CENT EDUC DIST NACIONES UNIDAS", localidad: "ENGATIVA", direccion: "CALLE 73 BIS # 68 G - 27" },
+  '2098': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)3", sitio_entrega: "CENT EDUC DIST RURAL LAGUNA VERDE", localidad: "SUMAPAZ", direccion: "KILOMETRO 6 VIA BETANIA LAGUNAVERDE" },
+  '2099': { nombre: "COLEGIO NICOLAS BUENAVENTURA (IED)1", sitio_entrega: "SEDE NICOLAS BUENAVENTURA (ANTES LAS MERCEDES)", localidad: "SUBA", direccion: "CARRERA 103 B # 153 - 01" },
+  '2100': { nombre: "COLEGIO NACIONAL NICOLAS ESGUERRA (IED)1", sitio_entrega: "COL NAL NICOLAS ESGUERRA", localidad: "KENNEDY", direccion: "CALLE 9 C # 68 - 52" },
+  '2101': { nombre: "COLEGIO NUEVA DELHI (IED)1", sitio_entrega: "CENT EDUC DIST NUEVA DELHI", localidad: "SAN CRISTOBAL", direccion: "CALLE 62 A SUR # 14 I - 33 ESTE" },
+  '2102': { nombre: "COLEGIO NUEVA ROMA (IED)1", sitio_entrega: "COLEGIO NUEVA ROMA (IED)", localidad: "SAN CRISTOBAL", direccion: "CALLE 48 SUR # 4 A - 39 ESTE" },
+  '2103': { nombre: "COLEGIO NUEVA ZELANDIA (IED)2", sitio_entrega: "CENT EDUC DIST ABC", localidad: "SUBA", direccion: "CALLE 187 # 49-42" },
+  '2104': { nombre: "COLEGIO O.E.A. (IED)2", sitio_entrega: "CENT EDUC DIST ANTONIA SANTOS I", localidad: "KENNEDY", direccion: "CARRERA 69 BIS # 39 - 30 SUR" },
+  '2105': { nombre: "COLEGIO OFELIA URIBE DE ACOSTA (IED)1", sitio_entrega: "OFELIA URIBE DE ACOSTA", localidad: "USME", direccion: "CALLE 81 A SUR # 6 - 40 ESTE INT 1" },
+  '2106': { nombre: "COLEGIO ORLANDO FALS BORDA (IED)1", sitio_entrega: "ORLANDO FALS BORDA (ANTES BARRANQUILLITA)", localidad: "USME", direccion: "CARRERA 1 A ESTE # 72 - 60 SUR" },
+  '2107': { nombre: "COLEGIO ORLANDO HIGUITA ROJAS (IED)1", sitio_entrega: "ORLANDO HIGUITA ROJAS (INST EDUC DIST)", localidad: "BOSA", direccion: "CALLE 57 SUR # 87 H - 03" },
+  '2108': { nombre: "COLEGIO TECNICO PALERMO (IED)1", sitio_entrega: "CENT EDUC DIST PALERMO CEDIP", localidad: "TEUSAQUILLO", direccion: "CARRERA 23 # 49 - 37" },
+  '2109': { nombre: "COLEGIO PAULO FREIRE (IED)1", sitio_entrega: "COLEGIO PAULO FREIRE (IED) - SEDE PRINCIPAL", localidad: "USME", direccion: "CARRERA 11 # 65 C - 50 SUR" },
+  '2110': { nombre: "COLEGIO PAULO VI (IED)1", sitio_entrega: "CENT EDUC DIST PAULO VI", localidad: "KENNEDY", direccion: "CARRERA 78 P # 41 - 20 SUR" },
+  '2111': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)17", sitio_entrega: "CENT EDUC DIST RURAL PEDREGAL- SEDE ADICIONAL", localidad: "SUMAPAZ", direccion: "VEREDA EL PEDREGAL" },
+  '2112': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)5", sitio_entrega: "CENT EDUC DIST RURAL PEÑALIZA", localidad: "SUMAPAZ", direccion: "VEREDA PEÑALIZA" },
+  '2113': { nombre: "COLEGIO PORFIRIO BARBA JACOB (IED)1", sitio_entrega: "CENT EDUC DIST PORFIRIO BARBA JACOB", localidad: "BOSA", direccion: "CALLE 70 A SUR # 81 G - 13" },
+  '2114': { nombre: "COLEGIO QUIROGA ALIANZA (IED)1", sitio_entrega: "CENT EDUC DIST QUIROGA ALIANZA", localidad: "RAFAEL URIBE URIBE", direccion: "CARRERA 23 # 35 - 20 SUR" },
+  '2115': { nombre: "COLEGIO RAFAEL BERNAL JIMENEZ (IED)1", sitio_entrega: "COL DIST RAFAEL BERNAL JIMENEZ", localidad: "BARRIOS UNIDOS", direccion: "CARRERA 53 # 75 - 17" },
+  '2116': { nombre: "COLEGIO RAMON DE ZUBIRIA (IED)3", sitio_entrega: "SEDE STEPHEN HAWKING", localidad: "SUBA", direccion: "CALLE 130 D NO 88 B 30" },
+  '2117': { nombre: "COLEGIO BOLIVIA (IED)1", sitio_entrega: "COLEGIO BOLIVIA (IED)", localidad: "ENGATIVA", direccion: "CARRERA 68 G # 78 - 90" },
+  '2118': { nombre: "COLEGIO REPUBLICA EE.UU. DE AMERICA (IED)1", sitio_entrega: "COL DIST EDUC BAS Y MEDIA REP EEUU DE AMERICA", localidad: "RAFAEL URIBE URIBE", direccion: "CALLE 22 SUR # 22 - 65" },
+  '2119': { nombre: "COLEGIO REPUBLICA DOMINICANA (IED)1", sitio_entrega: "COLEGIO REPUBLICA DOMINICANA (IED) - SEDE PRINCIPAL", localidad: "SUBA", direccion: "CALLE 131 A # 125 - 43" },
+  '2120': { nombre: "COLEGIO RODOLFO LLINAS (IED)1", sitio_entrega: "COLEGIO RODOLFO LLINAS IED - SEDE PRINCIPAL", localidad: "ENGATIVA", direccion: "DIAGONAL 86 A # 103 C - 80" },
+  '2121': { nombre: "COLEGIO INSTITUTO TECNICO RODRIGO DE TRIANA (IED)1", sitio_entrega: "CENT EDUC DIST INST TEC RODRIGO DE TRIANA", localidad: "KENNEDY", direccion: "CALLE 38 SUR # 89 - 81" },
+  '2122': { nombre: "COLEGIO RODRIGO LARA BONILLA (IED)1", sitio_entrega: "COL DIST EDUC BAS Y MEDIA RODRIGO LARA BONILLA", localidad: "CIUDAD BOLIVAR", direccion: "CARRERA 43 A # 66 - 51 SUR" },
+  '2123': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)5", sitio_entrega: "CENT EDUC DIST RURAL EL SALITRE", localidad: "SUMAPAZ", direccion: "VEREDA NUEVA GRANADA" },
+  '2124': { nombre: "COLEGIO SALUDCOOP NORTE (IED)1", sitio_entrega: "SALUDCOOP NORTE (INST EDUC DIST)", localidad: "USAQUEN", direccion: "CALLE 181 # 18 B - 83" },
+  '2125': { nombre: "COLEGIO SALUDCOOP SUR (IED)1", sitio_entrega: "SALUDCOOP SUR (INST EDUC DIST)", localidad: "KENNEDY", direccion: "AVENIDA CARRERA 89 # 26 - 03 SUR" },
+  '2126': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)12", sitio_entrega: "CENT EDUC DIST RURAL SAN ANTONIO", localidad: "SUMAPAZ", direccion: "VEREDA SAN ANTONIO" },
+  '2127': { nombre: "COLEGIO SAN CAYETANO (IED)1", sitio_entrega: "COLEGIO SAN CAYETANO (IED)", localidad: "USME", direccion: "CALLE 74 A SUR # 17 - 49 ESTE" },
+  '2128': { nombre: "COLEGIO SAN JOSE (IED)1", sitio_entrega: "CENT EDUC DIST SAN JOSE", localidad: "KENNEDY", direccion: "CALLE 42 A SUR # 79 D - 37" },
+  '2129': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)7", sitio_entrega: "CENT EDUC DIST RURAL SAN JOSE", localidad: "SUMAPAZ", direccion: "VEREDA SAN JOSE" },
+  '2130': { nombre: "COLEGIO SAN JOSE SUR ORIENTAL (IED)1", sitio_entrega: "CENT EDUC DIST SAN JOSE SUR ORIENTAL", localidad: "SAN CRISTOBAL", direccion: "CALLE 42 SUR # 12 A - 66 ESTE" },
+  '2131': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)10", sitio_entrega: "CENT EDUC DIST RURAL SAN JUAN", localidad: "SUMAPAZ", direccion: "VEREDA SAN JUAN" },
+  '2132': { nombre: "COLEGIO SAN RAFAEL (IED)1", sitio_entrega: "CENT EDUC DIST SAN RAFAEL", localidad: "KENNEDY", direccion: "CALLE 42 B SUR # 78 I - 05" },
+  '2133': { nombre: "COLEGIO SAN VICENTE (IED)1", sitio_entrega: "COLEGIO SAN VICENTE (IED)", localidad: "SAN CRISTOBAL", direccion: "CARRERA 8 ESTE # 33 - 70 SUR" },
+  '2134': { nombre: "COLEGIO SANTA LUCIA (IED)1", sitio_entrega: "COLEGIO SANTA LUCIA (IED)", localidad: "RAFAEL URIBE URIBE", direccion: "DIAGONAL 36 SUR # 16 B - 26" },
+  '2135': { nombre: "COLEGIO CAMPESTRE JAIME GARZON (IED)9", sitio_entrega: "CENT EDUC DIST RURAL SANTA ROSA DE NAZARETH", localidad: "SUMAPAZ", direccion: "VEREDA SANTA ROSA" },
+  '2136': { nombre: "COLEGIO SIERRA MORENA (IED)2", sitio_entrega: "CENT EDUC DIST SANTO DOMINGO SAVIO", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 62 B SUR # 77 C - 11" },
+  '2137': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)13", sitio_entrega: "CENT EDUC DIST RURAL SANTO DOMINGO", localidad: "SUMAPAZ", direccion: "VEREDA SANTO DOMINGO" },
+  '2138': { nombre: "COLEGIO SIERRA MORENA (IED)1", sitio_entrega: "CENT EDUC DIST SIERRA MORENA", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 77 A SUR # 61-10" },
+  '2139': { nombre: "COLEGIO SILVERIA ESPINOSA DE RENDON (IED)1", sitio_entrega: "COL DEPT SILVERIA ESPINOSA DE RENDON", localidad: "PUENTE ARANDA", direccion: "CARRERA 58 # 9 - 51" },
+  '2140': { nombre: "COLEGIO SIMON RODRIGUEZ (IED)1", sitio_entrega: "COL DIST SIMON RODRIGUEZ", localidad: "CHAPINERO", direccion: "CALLE 69 # 11 - 27" },
+  '2141': { nombre: "COLEGIO TOBERIN (IED)1", sitio_entrega: "COL DIST TOBERIN", localidad: "USAQUEN", direccion: "CALLE 166 # 16 C - 15" },
+  '2142': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)11", sitio_entrega: "CENT EDUC DIST RURAL EL TOLDO", localidad: "SUMAPAZ", direccion: "VEREDA EL TOLDO" },
+  '2143': { nombre: "COLEGIO TOMAS CARRASQUILLA (IED)1", sitio_entrega: "COL DIST TOMAS CARRASQUILLA", localidad: "BARRIOS UNIDOS", direccion: "CALLE 74 A # 63 - 04" },
+  '2144': { nombre: "COLEGIO TOMAS CIPRIANO DE MOSQUERA (IED)1", sitio_entrega: "COLEGIO TOMAS CIPRIANO DE MOSQUERA (IED) - SEDE PRINCIPAL", localidad: "ENGATIVA", direccion: "TRANSVERSAL 113 # 66 - 95" },
+  '2145': { nombre: "COLEGIO TECNICO TOMAS RUEDA VARGAS (IED)1", sitio_entrega: "COL DIST TOMAS RUEDA VARGAS", localidad: "SAN CRISTOBAL", direccion: "CARRERA 5 ESTE # 25 - 51 SUR" },
+  '2146': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)15", sitio_entrega: "CENT EDUC DIST RURAL TOTUMA ALTA - SEDE ADICIONAL", localidad: "SUMAPAZ", direccion: "VEREDA TOTUMA ALTA" },
+  '2147': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)16", sitio_entrega: "CENT EDUC DIST RURAL TOTUMA BAJA - SEDE ADICIONAL", localidad: "SUMAPAZ", direccion: "VEREDA TOTUMA BAJA" },
+  '2148': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)2", sitio_entrega: "CENT EDUC DIST RURAL TUNAL ALTO", localidad: "SUMAPAZ", direccion: "VEREDA TUNAL ALTO" },
+  '2149': { nombre: "COLEGIO GIMNASIO DEL CAMPO JUAN DE LA CRUZ VARELA (IED)3", sitio_entrega: "CENT EDUC DIST RURAL TUNAL BAJO", localidad: "SUMAPAZ", direccion: "VEREDA TUNAL BAJO" },
+  '2150': { nombre: "COLEGIO USAQUEN (IED)1", sitio_entrega: "CENT EDUC DIST DE USAQUEN (ANTIGUA COLONIA ESCOLAR DE VACACI)", localidad: "USAQUEN", direccion: "CALLE 127 C # 9 A - 03" },
+  '2151': { nombre: "COLEGIO ATABANZHA (IED)1", sitio_entrega: "COLEGIO ATABANZHA (IED)", localidad: "USME", direccion: "CALLE 92 SUR 14 D 87" },
+  '2152': { nombre: "COLEGIO VEINTIUN ANGELES (IED)1", sitio_entrega: "VEINTIUN ANGELES (INST EDUC DIST)", localidad: "SUBA", direccion: "CARRERA 90 # 154 A - 09" },
+  '2153': { nombre: "COLEGIO VENECIA (IED)1", sitio_entrega: "COL DIST VENECIA", localidad: "TUNJUELITO", direccion: "CARRERA 55 # 49 - 25 SUR" },
+  '2154': { nombre: "COLEGIO VILLEMAR EL CARMEN (IED)1", sitio_entrega: "CENT EDUC DIST VILLEMAR EL CARMEN", localidad: "FONTIBON", direccion: "CALLE 20 D # 96 G - 51" },
+  '2155': { nombre: "COLEGIO VIRGINIA GUTIERREZ DE PINEDA (IED)1", sitio_entrega: "COL VIRGINIA GUTIERREZ DE PINEDA (INS EDUC DIST)", localidad: "SUBA", direccion: "CALLE 131 B # 94 F - 31" },
+  '2156': { nombre: "COLEGIO REPUBLICA DE COLOMBIA (IED)2", sitio_entrega: "CENT EDUC DIST REP DE CHILE", localidad: "ENGATIVA", direccion: "CARRERA 69 C # 69 - 20" },
+  '2157': { nombre: "COLEGIO SANTA LIBRADA (IED)1", sitio_entrega: "CENT EDUC DIST SANTA LIBRADA", localidad: "USME", direccion: "CALLE 75 B SUR # 9 B - 06" },
+  '2158': { nombre: "COLEGIO GRANCOLOMBIANO (IED)1", sitio_entrega: "CENT EDUC DIST GRANCOLOMBIANO", localidad: "BOSA", direccion: "DIAGONAL 73 D BIS SUR # 79 - 23" },
+  '2159': { nombre: "COLEGIO LA MERCED (IED)1", sitio_entrega: "COL DIST LA MERCED", localidad: "PUENTE ARANDA", direccion: "CALLE 13 # 42 A - 51" },
+  '2160': { nombre: "COLEGIO EXTERNADO NACIONAL CAMILO TORRES (IED)1", sitio_entrega: "EXTERNADO NAL CAMILO TORRES", localidad: "SANTAFE", direccion: "CARRERA 7 # 33 - 64" },
+  '2161': { nombre: "COLEGIO GERARDO PAREDES (IED)1", sitio_entrega: "COL DIST EDUC BAS Y MEDIA GERARDO PAREDES MARTINEZ", localidad: "SUBA", direccion: "CARRERA 94 C # 129 A - 04" },
+  '2162': { nombre: "COLEGIO NUEVA CONSTITUCION (IED)1", sitio_entrega: "CENT EDUC DIST NUEVA CONSTITUCION", localidad: "ENGATIVA", direccion: "CARRERA 107 B # 74 B -31" },
+  '2163': { nombre: "COLEGIO SAN CARLOS (IED)2", sitio_entrega: "CENT EDUC DIST SAN CARLOS", localidad: "TUNJUELITO", direccion: "KR 19 50 37 SUR" },
+  '2164': { nombre: "COLEGIO EL ENSUEÑO (IED)1", sitio_entrega: "COLEGIO EL ENSUEÑO (IED) - SEDE PRINCIPAL", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 68 SUR NO 69-82" },
+  '2165': { nombre: "COLEGIO LAS MARGARITAS (IED)1", sitio_entrega: "COLEGIO LAS MARGARITAS (IED) - SEDE PRINCIPAL", localidad: "KENNEDY", direccion: "CARRERA 88 C NO 43-53 SUR" },
+  '2166': { nombre: "COLEGIO LAS AMERICAS (IED)1", sitio_entrega: "COLEGIO LAS AMERICAS IED - SEDE PRINCIPAL", localidad: "KENNEDY", direccion: "CARRERA 73C BIS # 38C 84 SUR" },
+  '2167': { nombre: "COLEGIO ATAHUALPA (IED)2", sitio_entrega: "COLEGIO ATAHUALPA REFUGIO PUERTO CENTRAL", localidad: "FONTIBON", direccion: "CARRERA 120 # 22L - 44" },
+  '2169': { nombre: "COLEGIO JORGE ISAACS (IED)1", sitio_entrega: "COLEGIO JORGE ISAACS (IED) - SEDE PRINCIPAL", localidad: "BOSA", direccion: "CARRERA 92 # 73 -50 SUR" },
+  '2170': { nombre: "COLEGIO NIDIA QUINTERO DE TURBAY (IED)1", sitio_entrega: "COL NAL NIDYA QUINTERO DE TURBAY", localidad: "ENGATIVA", direccion: "CALLE 75 # 90-75" },
+  '2171': { nombre: "COLEGIO SOLEDAD ACOSTA DE SAMPER (IED)1", sitio_entrega: "COLEGIO SOLEDAD ACOSTA DE SAMPER (IED) - SEDE PRINCIPAL", localidad: "BOSA", direccion: "CALLE 50 SUR # 98 B - 70 INTERIOR 14" },
+  '2172': { nombre: "COLEGIO TECNICO SAN CRISTOBAL SUR (IED)1", sitio_entrega: "CENT EDUC DIST SAN CRISTOBAL SUR", localidad: "SAN CRISTOBAL", direccion: "CARRERA 10 D ESTE # 17 B - 46 SUR" },
+  '2173': { nombre: "COLEGIO CARLOS ALBAN HOLGUIN (IED)1", sitio_entrega: "CENT EDUC DIST CARLOS ALBAN HOLGUIN", localidad: "BOSA", direccion: "CALLE 72 SUR # 79 D - 33" },
+  '2174': { nombre: "COLEGIO ROGELIO SALMONA (IED)1", sitio_entrega: "COLEGIO ROGELIO SALMONA (IED) - SEDE PRINCIPAL", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 59 SUR # 65 - 42" },
+  '2176': { nombre: "COLEGIO BICENTENARIO DE LA INDEPENDENCIA (IED)1", sitio_entrega: "COLEGIO BICENTENARIO DE LA INDEPENDENCIA (IED) - SEDE PRINCIPAL", localidad: "BOSA", direccion: "CALLE 81 SUR # 81 - 75" },
+  '2177': { nombre: "COLEGIO MARSELLA (IED)1", sitio_entrega: "CENT EDUC DIST BAS Y MEDIA MARSELLA", localidad: "KENNEDY", direccion: "CARRERA 69 # 7 - 90" },
+  '2178': { nombre: "COLEGIO GRANCOLOMBIANO (IED)3", sitio_entrega: "CENT EDUC DIST CHARLES DE GAULLE", localidad: "BOSA", direccion: "CALLE 73 F SUR # 80 N BIS - 49" },
+  '2179': { nombre: "COLEGIO INSTITUTO TECNICO INDUSTRIAL PILOTO (IED)1", sitio_entrega: "INST TEC IND PILOTO", localidad: "TUNJUELITO", direccion: "CARRERA 35 # 51B-87 SUR" },
+  '2180': { nombre: "COLEGIO VILLAS DEL PROGRESO (IED)3", sitio_entrega: "SEDE PRIMERA INFANCIA", localidad: "BOSA", direccion: "CALLE 55 SUR NO 103-98" },
+  '2181': { nombre: "COLEGIO PROSPERO PINZON (IED)1", sitio_entrega: "COLEGIO PROSPERO PINZON IED - SEDE PRINCIPAL", localidad: "KENNEDY", direccion: "CALLE 35 C SUR # 78 F - 81" },
+  '2182': { nombre: "COLEGIO RODRIGO LARA BONILLA (IED)3", sitio_entrega: "PRIMERA INFANCIA RODRIGUITO", localidad: "CIUDAD BOLIVAR", direccion: "CARRERA 43 A # 66 - 51 SUR" },
+  '2183': { nombre: "COLEGIO HERNANDO DURAN DUSSAN (IED)1", sitio_entrega: "CENT EDUC DIST HERNANDO DURAN DUSSAN", localidad: "KENNEDY", direccion: "CALLE 42 F SUR # 88 A - 25" },
+  '2184': { nombre: "COLEGIO JOSE EUSTASIO RIVERA (IED)1", sitio_entrega: "COLEGIO JOSE EUSTASIO RIVERA (IED) - SEDE PRINCIPAL", localidad: "USME", direccion: "CARRERA 14 B # 136 - 22 SUR" },
+  '2185': { nombre: "COLEGIO NUEVO CHILE (IED)1", sitio_entrega: "CENT EDUC DIST NUEVO CHILE", localidad: "BOSA", direccion: "CALLE 56 SUR # 72 G - 20" },
+  '2186': { nombre: "COLEGIO TABORA (IED)1", sitio_entrega: "CEDIT TABORA", localidad: "ENGATIVA", direccion: "CARRERA 77 B # 74 A - 02" },
+  '2187': { nombre: "COLEGIO JULIO GARAVITO ARMERO (IED)3", sitio_entrega: "CENT EDUC DIST MUZU NO. 2", localidad: "PUENTE ARANDA", direccion: "CARRERA 52 #  37-05 SUR" },
+  '2188': { nombre: "COLEGIO CARLOS ARANGO VELEZ (IED)1", sitio_entrega: "COL DIST CARLOS ARANGO VELEZ", localidad: "KENNEDY", direccion: "TRANSVERSAL 68 G NO 35 A 42 SUR" },
+  '2189': { nombre: "COLEGIO GUSTAVO RESTREPO (IED)2", sitio_entrega: "CENT EDUC DIST JOSE ACEVEDO Y GOMEZ", localidad: "RAFAEL URIBE URIBE", direccion: "CRA. 13 #26A 17 SUR, BOGOTÁ" },
+  '2190': { nombre: "COLEGIO LA GIRALDA (IED)1", sitio_entrega: "COLEGIO LA GIRALDA (IED)", localidad: "SANTAFE", direccion: "AVENIDA CALLE 1 # 3 - 60" },
+  '2191': { nombre: "COLEGIO DIANA TURBAY (IED)1", sitio_entrega: "DIANA TURBAY I", localidad: "RAFAEL URIBE URIBE", direccion: "DIAGONAL 48 Z SUR # 4 B - 10" },
+  '2193': { nombre: "COLEGIO DE LA BICI (IED)1", sitio_entrega: "COLEGIO DE LA BICI (IED) - SEDE PRINCIPAL", localidad: "BOSA", direccion: "CARRERA 81 A # 58 J - 45 SUR" },
+  '2194': { nombre: "COLEGIO GABRIEL BETANCOURT MEJIA (IED)2", sitio_entrega: "SEDE B - GABRIEL BETANCOURT MEJIA", localidad: "KENNEDY", direccion: "CALLE 11A 88A 27" },
+  '2195': { nombre: "COLEGIO LA ESTRELLITA (IED)1", sitio_entrega: "COLEGIO LA ESTRELLITA (IED)", localidad: "USAQUEN", direccion: "CARRERA 4 # 187 B - 37" },
+  '2196': { nombre: "COLEGIO REPUBLICA DEL ECUADOR (IED)1", sitio_entrega: "COL DIST EDUC BAS Y MEDIA REP DEL ECUADOR", localidad: "SAN CRISTOBAL", direccion: "CALLE  7 A SUR NO 0-50 ESTE" },
+  '2197': { nombre: "COLEGIO MIRAVALLE (IED)1", sitio_entrega: "COLEGIO MIRAVALLE (IED)", localidad: "USME", direccion: "DIAGONAL 76 SUR # 3 B - 30" },
+  '2198': { nombre: "COLEGIO ANDRES BELLO (IED)1", sitio_entrega: "COL NAL ANDRES BELLO", localidad: "PUENTE ARANDA", direccion: "CALLE 39 SUR # 51 D - 19" },
+  '2199': { nombre: "COLEGIO RAFAEL URIBE URIBE (IED)1", sitio_entrega: "COL DIST U.B. RAFAEL URIBE URIBE", localidad: "TUNJUELITO", direccion: "CARRERA 25 NO 47-02 SUR" },
+  '2200': { nombre: "COLEGIO RESTREPO MILLAN (IED)1", sitio_entrega: "COL NAL RESTREPO MILLAN", localidad: "RAFAEL URIBE URIBE", direccion: "CALLE 40 SUR # 23 - 25" },
+  '2201': { nombre: "COLEGIO LAUREL DE CERA (IED)1", sitio_entrega: "COLEGIO LAUREL DE CERA (IED) - SEDE PRINCIPAL", localidad: "BOSA", direccion: "CL 85 SUR # 91-91" },
+  '2202': { nombre: "COLEGIO PARQUES DE BOGOTA (IED)1", sitio_entrega: "COLEGIO PARQUES DE BOGOTA (IED) - SEDE PRINCIPAL", localidad: "BOSA", direccion: "CL 85 SUR # 94 - 55" },
+  '2203': { nombre: "COLEGIO EMMA REYES (IED)1", sitio_entrega: "COLEGIO CIUDAD DE TECHO I (IED) - SEDE PRINCIPAL", localidad: "KENNEDY", direccion: "CARRERA 80 B NO 6-71" },
+  '2204': { nombre: "COLEGIO LAS MERCEDES (IED)1", sitio_entrega: "COLEGIO LAS MERCEDES (IED)", localidad: "ENGATIVA", direccion: "CARRERA 105 F # 66 - 33" },
+  '2206': { nombre: "COLEGIO INSTITUTO TECNICO LAUREANO GOMEZ (IED)1", sitio_entrega: "INST TEC DIST LAUREANO GOMEZ", localidad: "ENGATIVA", direccion: "CARRERA 95 G NO 90 A 40" },
+  '2207': { nombre: "COLEGIO MANUELA BELTRAN (IED)1", sitio_entrega: "INST DIST DE COMERCIO MANUELA BELTRAN", localidad: "TEUSAQUILLO", direccion: "CARRERA 14 A # 57 - 28" },
+  '2208': { nombre: "COLEGIO LA JOYA (IED)1", sitio_entrega: "COLEGIO LA JOYA (IED)", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 80 A SUR # 18 C - 70" },
+  '2209': { nombre: "COLEGIO ANGELA RESTREPO MORENO (IED)1", sitio_entrega: "COLEGIO SIERRA MORENA CURVA (IED) - SEDE PRINCIPAL", localidad: "CIUDAD BOLIVAR", direccion: "CALLE 69 SUR NO 71G-12" },
+  '2210': { nombre: "COLEGIO EL NOGAL (IED)1", sitio_entrega: "COLEGIO EL NOGAL (IED) - SEDE PRINCIPAL", localidad: "CIUDAD BOLIVAR", direccion: "TRANSVERSAL 54  NO  71 - 09 SUR" },
+  '2211': { nombre: "COLEGIO INTEGRADO DE FONTIBON IBEP (IED)2", sitio_entrega: "CENT EDUC DIST EMMA VILLEGAS DE GAITAN", localidad: "FONTIBON", direccion: "CL 22 F # 109 B - 29" },
+  '2212': { nombre: "COLEGIO GLORIA VALENCIA DE CASTAÑO (IED)1", sitio_entrega: "COL GLORIA VALENCIA DE CASTAÑO", localidad: "SAN CRISTOBAL", direccion: "CARRERA 15 ESTE 61A - 10 SUR" },
+  '2213': { nombre: "COLEGIO LAURA HERRERA DE VARELA (IED)1", sitio_entrega: "COLEGIO LAURA HERRERA DE VARELA (IED) - SEDE", localidad: "BOSA", direccion: "KR 88I 54F 17 SUR" },
+  '2214': { nombre: "COLEGIO ESMERALDA ARBOLEDA CADAVID (IED)1", sitio_entrega: "COLEGIO ESMERALDA ARBOLEDA CADAVID (IED)", localidad: "BOSA", direccion: "CALLE 71A SUR # 82A - 10" },
+  '2215': { nombre: "COLEGIO CIUDADELA EL RECREO SONIA OSORIO DE SAINT-MALO (IED)1", sitio_entrega: "COLEGIO CIUDADELA EL RECREO SONIA OSORIO DE SAINT-MALO (IED)", localidad: "BOSA", direccion: "CARRERA 97 C # 65 - 02 SUR" },
+  '2216': { nombre: "COLEGIO ABEL RODRIGUEZ CESPEDES (IED)1", sitio_entrega: "COL ABEL RODRIGUEZ CESPEDES", localidad: "ENGATIVA", direccion: "CL 72F 114 51 IN 38" },
+  '2218': { nombre: "COLEGIO JUAN REY (IED)1", sitio_entrega: "CENT EDUC DIST JUAN REY", localidad: "SAN CRISTOBAL", direccion: "CALLE 70 SUR # 13 B-27 ESTE" },
+  '2219': { nombre: "COLEGIO ARBORIZADORA ALTA (IED)1", sitio_entrega: "ARBORIZADORA ALTA", localidad: "CIUDAD BOLIVAR", direccion: "CARRERA 43 # 70 A -50 SUR" },
+  '2220': { nombre: "COLEGIO SAN PEDRO CLAVER (IED)1", sitio_entrega: "CENT EDUC DIST EDUC BAS Y MEDIA SAN PEDRO CLAVER", localidad: "KENNEDY", direccion: "KR 79 C # 41 B - 51 SUR" },
+  '2221': { nombre: "COLEGIO AGUDELO RESTREPO (IED)1", sitio_entrega: "COLEGIO AGUDELO RESTREPO (IED)", localidad: "CIUDAD BOLIVAR", direccion: "KR 70D 65 25 SUR" },
+  '2222': { nombre: "COLEGIO SAN IGNACIO (IED)1", sitio_entrega: "COLEGIO SAN IGNACIO (IED)", localidad: "BOSA", direccion: "CL 56 F SUR # 91 D - 14" },
+  '2223': { nombre: "COLEGIO JUAN LOZANO Y LOZANO (IED)3", sitio_entrega: "PRIMERA INFANCIA ANA MERCEDES HOYOS MEJIA", localidad: "SUBA", direccion: "CARRERA 106 B NO 151C -92" },
+  '2224': { nombre: "COLEGIO LUCILA RUBIO DE LAVERDE (IED)1", sitio_entrega: "COL LUCILA RUBIO DE LAVERDE", localidad: "ENGATIVA", direccion: "CALLE 78 C 130 01" },
+  '2225': { nombre: "COLEGIO SANTIAGO DE LAS ATALAYAS (IED)1", sitio_entrega: "COLEGIO SANTIAGO DE LAS ATALAYAS (IED)", localidad: "BOSA", direccion: "CL 61 SUR # 103 - 33" },
+  '2226': { nombre: "COLEGIO JAIME HERNANDO GARZON FORERO (IED)1", sitio_entrega: "COLEGIO JAIME HERNANDO GARZON FORERO (IED)", localidad: "KENNEDY", direccion: "TV. 85A #49 SUR85" },
+  '2227': { nombre: "COLEGIO CIUDAD CHENGDU (IED)1", sitio_entrega: "COLEGIO CIUDAD CHENGDÚ", localidad: "USME", direccion: "CL 79 SUR # 8 - 50 ESTE" },
+  '2230': { nombre: "COLEGIO SAN JOSE DE USME (IED)1", sitio_entrega: "COLEGIO SAN JOSE DE USME (IED)", localidad: "USME", direccion: "CL 97 SUR # 14 B - 05" },
+  '2231': { nombre: "COLEGIO ARGELIA (IED)1", sitio_entrega: "COLEGIO ARGELIA (IED)", localidad: "BOSA", direccion: "CL 60 SUR # 89 A - 12" },
+  '2233': { nombre: "COLEGIO TORQUIGUA (IED)1", sitio_entrega: "COLEGIO TORQUIGUA (IED)", localidad: "ENGATIVA", direccion: "CL 64 # 128 - 50" },
+  '2234': { nombre: "COLEGIO JAIME NIÑO DIEZ (IED)1", sitio_entrega: "COLEGIO JAIME NIÑO DIEZ (IED)", localidad: "SUBA", direccion: "AVDA CALLE 145 CARRERA 111 A" },
+  '2235': { nombre: "PLANTA DE PRODUCCION SIAT", sitio_entrega: "NA", localidad: "ENGATIVA", direccion: "CARRERA 71 A BIS # 63D - 38" },
+  '2239': { nombre: "COLEGIO BRASILIA - BOSA (IED)4", sitio_entrega: "SEDE D", localidad: "BOSA", direccion: "CARRERA 98 NO 54 C - 04 SUR" },
+  '2240': { nombre: "COLEGIO GUILLERMO LEON VALENCIA (IED)1", sitio_entrega: "COL DIST GUILLERMO LEON VALENCIA", localidad: "ANTONIO NARIÑO", direccion: "CARRERA 24B NO 16-03 SUR" },
+  '2241': { nombre: "COLEGIO INTEGRADA LA CANDELARIA (IED)1", sitio_entrega: "CENT EDUC DIST LA CONCORDIA - EMBERA", localidad: "LA CANDELARIA", direccion: "CARRERA 2 NO 14-90" },
+  '2242': { nombre: "COLEGIO VILLEMAR EL CARMEN (IED)3", sitio_entrega: "SEDE GIMNASIO ACADÉMICO", localidad: "FONTIBON", direccion: "KR 98 No. 22 H 37" },
+  '2243': { nombre: "COLEGIO FELIZA BURSZTYN (IED)1", sitio_entrega: "COLEGIO FELIZA BURSZTYN (IED)", localidad: "KENNEDY", direccion: "CL 1 # 69A - 07" },
+  '2245': { nombre: "COLEGIO SAN FRANCISCO DE ASIS (IED)1", sitio_entrega: "NACIONAL FEMENINO", localidad: "LOS MARTIRES", direccion: "CALLE 1C BIS # 19-79" },
+  '2246': { nombre: "COLEGIO RURAL CHIZACA (CED)1", sitio_entrega: "CENT EDUC DIST RURAL CHIZACA", localidad: "USME", direccion: "KM 24 VIA SAN JUAN DE SUMAPAZ" },
+  '2247': { nombre: "COLEGIO LA TOSCANA - LISBOA (IED)4", sitio_entrega: "MARÍA CRISTINA SALAZAR CAMACHO", localidad: "SUBA", direccion: "CALLE 142 NO 128-02" },
+  '2248': { nombre: "COLEGIO MARIA CURREA MANRIQUE (IED)1", sitio_entrega: "MARIA CURREA MANRIQUE", localidad: "CIUDAD BOLIVAR", direccion: "CL 58D SUR 51 10" },
+  '2249': { nombre: "COLEGIO REPUBLICA DE PANAMA (IED)1", sitio_entrega: "COL DIST REP DE PANAMA", localidad: "BARRIOS UNIDOS", direccion: "KR 57 A # 74 A - 32" },
+  '2250': { nombre: "COLEGIO RURAL LAS MERCEDES1", sitio_entrega: "COLEGIO RURAL LAS MERCEDES", localidad: "USME", direccion: "KM 17 VIA USME SAN JUAN DE SUMAPAZ" },
+  '2251': { nombre: "COLEGIO MARIA JOSEFA CANELONES (IED)1", sitio_entrega: "COLEGIO MARIA JOSEFA CANELONES (IED)", localidad: "FONTIBON", direccion: "AVENIDA CALLE 17 NO 72-85" },
+  '2252': { nombre: "COLEGIO BUENAVISTA (IED)1", sitio_entrega: "COLEGIO BUENAVISTA (IED)", localidad: "CIUDAD BOLIVAR", direccion: "KR 17 F # 77 - 75 SUR" },
+  '2253': { nombre: "COLEGIO MARSELLA (IED)2", sitio_entrega: "SEDE ELOISA GARZON", localidad: "KENNEDY", direccion: "CARRERA 69 # 7 - 90" },
+  '2256': { nombre: "COLEGIO REINO UNIDO DE HOLANDA - ALEXANDER FLEMING (IED)1", sitio_entrega: "COLEGIO REINO UNIDO DE HOLANDA - ALEXANDER FLEMING (IED)", localidad: "RAFAEL URIBE URIBE", direccion: "DIAGONAL 45 BIS SUR No 13F - 03" }
+};
+
+// =====================================================================================
+// STATE
+// =====================================================================================
+const state = {
+  fileName: '',
+  rawRows: [],           // filas del Excel de OC
+  ocs: [],               // { numero, fecha, colegios, productos, cantidad, lineas, selected }
+  productos: [],         // { sap, nombre, cantidad, embalaje, canastillas, sueltas, linea, colegios, selected, maestraOk }
+  colegios: {},          // { punto: { punto, nombre, localidad, direccion, sede, jornada, horario, sitio_entrega } }
+  localidades: [],       // { nombre, ptos, cantidad, canastillas, selected, numRutas, agrupar }
+  rutas: [],             // { id, nombre, localidades:[], colegiosDist:{ punto: rutaSubIdx }, conductor, placa }
+  colegiosAsignados: {}, // { punto: rutaId }
+};
+
+// =====================================================================================
+// UI HELPERS
+// =====================================================================================
+function fmtN(n) { return new Intl.NumberFormat('es-CO').format(Math.round(n||0)); }
+function fmtP(n) { return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n||0); }
+function fmtDate(d) {
+  if (!d) return '';
+  if (typeof d === 'string' && d.includes('/')) return d;
+  if (d instanceof Date) return d.toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric' });
+  if (typeof d === 'number') {
+    const dt = new Date(Math.round((d - 25569) * 86400 * 1000));
+    return dt.toLocaleDateString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+  return String(d);
+}
+function fmtDateISO(d) {
+  if (d instanceof Date) return d.toISOString().split('T')[0];
+  return '';
+}
+function slug(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-'); }
+
+function getFechaOcISO() {
+  // Devuelve la fecha de entrega de la primera OC seleccionada como YYYY-MM-DD, o hoy si no hay
+  const oc = state.ocs.find(o => o.selected);
+  if (oc && oc.fecha instanceof Date) return oc.fecha.toISOString().split('T')[0];
+  return new Date().toISOString().split('T')[0];
+}
+
+function gotoStep(n) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
+  document.getElementById(`panel-${n}`).classList.remove('hidden');
+  document.querySelectorAll('.step').forEach((s,i) => {
+    s.classList.remove('active','done');
+    const idx = i+1;
+    if (idx < n) s.classList.add('done');
+    else if (idx === n) s.classList.add('active');
+  });
+}
+
+document.querySelectorAll('.step').forEach(el => {
+  el.addEventListener('click', () => {
+    if (el.classList.contains('done')) gotoStep(parseInt(el.dataset.step));
+  });
+});
+
+// =====================================================================================
+// PANEL 1 — UPLOAD
+// =====================================================================================
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+function handleFile(file) {
+  if (!file) return;
+  const msg = document.getElementById('upload-msg');
+  msg.innerHTML = '<div class="msg msg-info">Leyendo archivo...</div>';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      state.fileName = file.name;
+      const wb = XLSX.read(e.target.result, { type:'binary', cellDates:true });
+      // Buscar la hoja con datos: primera que tenga columna "Punto" o "Numero OC"
+      let sheet = null, sheetName = null;
+      for (const name of wb.SheetNames) {
+        const s = wb.Sheets[name];
+        const arr = XLSX.utils.sheet_to_json(s, { header:1, defval:'', raw:false });
+        if (!arr.length) continue;
+        const head = arr[0].map(c => String(c).toLowerCase());
+        if (head.some(h => h.includes('numero oc')) || head.some(h => h === 'punto')) {
+          sheet = s; sheetName = name; break;
+        }
+      }
+      if (!sheet) throw new Error('No se encontró hoja con columnas Punto / Numero OC');
+
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval:'', raw:false });
+      if (!rows.length) throw new Error('El archivo no tiene filas de datos');
+
+      // Normalizar keys
+      const keyMap = {};
+      Object.keys(rows[0]).forEach(k => {
+        const norm = k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[_\s]/g,'');
+        keyMap[norm] = k;
+      });
+      const K = {
+        punto:     keyMap['punto'] || Object.keys(rows[0]).find(k => k.toLowerCase().includes('punto')),
+        preorden:  keyMap['preorden'],
+        fecha_ent: keyMap['fechaentrega'],
+        oc:        keyMap['numerooc'] || Object.keys(rows[0]).find(k => k.toLowerCase().includes('numero oc')),
+        bodega:    keyMap['nombrebodega'],
+        articulo:  keyMap['articulo'],
+        nombre:    keyMap['nombre'],
+        cantidad:  keyMap['cantidad'],
+        localidad: keyMap['localidad'],
+      };
+      if (!K.punto || !K.oc || !K.articulo || !K.cantidad) {
+        throw new Error(`Columnas clave no encontradas. Necesito: Punto, Numero OC, Articulo, Cantidad. Encontré: ${Object.keys(rows[0]).join(', ')}`);
+      }
+
+      // Parseamos filas
+      state.rawRows = rows.map(r => {
+        const fechaEnt = r[K.fecha_ent];
+        return {
+          punto: String(r[K.punto]).trim(),
+          preorden: r[K.preorden] || '',
+          fecha_entrega: fechaEnt,
+          oc: String(r[K.oc]).trim(),
+          bodega: String(r[K.bodega]||'').trim(),
+          sap: String(r[K.articulo]).trim(),
+          nombre: String(r[K.nombre]||'').trim(),
+          cantidad: parseInt(r[K.cantidad]) || 0,
+          localidad: String(r[K.localidad]||'').trim(),
+        };
+      }).filter(r => r.punto && r.sap && r.cantidad > 0);
+
+      if (!state.rawRows.length) throw new Error('No hay filas válidas con cantidad > 0');
+
+      // Detectar OCs
+      const ocMap = {};
+      state.rawRows.forEach(r => {
+        if (!ocMap[r.oc]) {
+          ocMap[r.oc] = { numero: r.oc, fecha: r.fecha_entrega, colegios: new Set(), productos: new Set(), lineas: new Set(), cantidad: 0, filas: 0 };
+        }
+        const o = ocMap[r.oc];
+        o.colegios.add(r.punto);
+        o.productos.add(r.sap);
+        const maestra = PRODUCTOS_MAESTRA[r.sap];
+        o.lineas.add(maestra ? maestra.linea : 'OTRO');
+        o.cantidad += r.cantidad;
+        o.filas += 1;
+      });
+      state.ocs = Object.values(ocMap).map(o => ({
+        numero: o.numero,
+        fecha: o.fecha,
+        colegios: o.colegios.size,
+        productos: o.productos.size,
+        lineas: [...o.lineas],
+        cantidad: o.cantidad,
+        filas: o.filas,
+        selected: true,
+      }));
+
+      msg.innerHTML = `<div class="msg msg-ok">✓ ${file.name} — ${state.rawRows.length} filas, ${state.ocs.length} OC(s) detectada(s)</div>`;
+
+      renderOcs();
+      gotoStep(2);
+    } catch (err) {
+      msg.innerHTML = `<div class="msg msg-err">Error: ${err.message}</div>`;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+// =====================================================================================
+// PANEL 2 — SELECCIONAR OCs
+// =====================================================================================
+function renderOcs() {
+  const grid = document.getElementById('ocs-grid');
+  grid.innerHTML = '';
+  state.ocs.forEach((oc, idx) => {
+    const card = document.createElement('div');
+    card.className = 'oc-card' + (oc.selected ? ' selected' : '');
+    card.onclick = () => { oc.selected = !oc.selected; renderOcs(); };
+    card.innerHTML = `
+      <div class="oc-chk"></div>
+      <div class="oc-num">OC ${oc.numero}</div>
+      <div class="oc-date">Fecha: ${fmtDate(oc.fecha)}</div>
+      <div class="oc-info">
+        <span><b>${oc.colegios}</b> colegios</span>
+        <span><b>${oc.productos}</b> productos</span>
+        <span><b>${fmtN(oc.cantidad)}</b> unidades</span>
+      </div>
+      <div style="margin-top:8px;font-size:10px">${oc.lineas.map(l => `<span class="pill pill-${l.toLowerCase()}">${l}</span>`).join(' ')}</div>
+    `;
+    grid.appendChild(card);
+  });
+  const total = state.ocs.filter(o => o.selected).length;
+  document.getElementById('ocs-info').innerHTML =
+    `<div class="msg msg-info">Detecté <b>${state.ocs.length}</b> OC(s) en el archivo. ${total} seleccionada(s).</div>`;
+}
+
+function confirmOcs() {
+  const sel = state.ocs.filter(o => o.selected);
+  if (!sel.length) { alert('Selecciona al menos una OC'); return; }
+  buildProductos();
+  gotoStep(3);
+}
+
+// =====================================================================================
+// PANEL 3 — PRODUCTOS
+// =====================================================================================
+let filterLinea = 'ALL';
+
+function buildProductos() {
+  const ocsSet = new Set(state.ocs.filter(o => o.selected).map(o => o.numero));
+  const rows = state.rawRows.filter(r => ocsSet.has(r.oc));
+
+  // Colegios: cruzar con DIRECTORIO_COLEGIOS solo para la dirección
+  state.colegios = {};
+  rows.forEach(r => {
+    if (!state.colegios[r.punto]) {
+      const dir = DIRECTORIO_COLEGIOS[r.punto];
+      state.colegios[r.punto] = {
+        punto: r.punto,
+        nombre: r.bodega,           // Siempre del Excel (Nombre_Bodega)
+        sitio_entrega: r.bodega,    // Siempre del Excel
+        localidad: r.localidad,     // Del Excel (define ruteo)
+        direccion: dir ? dir.direccion : '—',  // Solo esto viene del directorio
+        sede: '—',
+        jornada: '—',
+        horario: '—',
+        enDirectorio: !!dir,
+      };
+    }
+  });
+
+  // Productos
+  const prodMap = {};
+  rows.forEach(r => {
+    if (!prodMap[r.sap]) {
+      prodMap[r.sap] = {
+        sap: r.sap,
+        nombre_excel: r.nombre,
+        cantidad: 0,
+        colegios: new Set(),
+      };
+    }
+    prodMap[r.sap].cantidad += r.cantidad;
+    prodMap[r.sap].colegios.add(r.punto);
+  });
+
+  state.productos = Object.values(prodMap).map(p => {
+    const maestra = PRODUCTOS_MAESTRA[p.sap];
+    const embalaje = maestra ? maestra.embalaje : 0;
+    const canastillas = embalaje ? Math.floor(p.cantidad / embalaje) : 0;
+    const sueltas = embalaje ? (p.cantidad % embalaje) : p.cantidad;
+    return {
+      sap: p.sap,
+      nombre: maestra ? maestra.nombre : p.nombre_excel,
+      nombre_excel: p.nombre_excel,
+      cantidad: p.cantidad,
+      embalaje,
+      canastillas,
+      sueltas,
+      linea: maestra ? maestra.linea : 'OTRO',
+      precio: maestra ? maestra.precio : 0,
+      colegios: p.colegios.size,
+      selected: maestra ? maestra.linea === 'PANADERIA' : false,
+      maestraOk: !!maestra,
+    };
+  });
+
+  renderProductos();
+}
+
+function renderProductos() {
+  const tbody = document.getElementById('prod-tbody');
+  tbody.innerHTML = '';
+  const list = filterLinea === 'ALL' ? state.productos : state.productos.filter(p => p.linea === filterLinea);
+
+  list.forEach(p => {
+    const tr = document.createElement('tr');
+    if (p.selected) tr.classList.add('selected');
+    if (!p.maestraOk) tr.classList.add('row-warn');
+    tr.innerHTML = `
+      <td class="chk-cell"><input type="checkbox" ${p.selected?'checked':''} onchange="toggleProducto('${p.sap}', this.checked)"></td>
+      <td>
+        <div style="font-weight:500">${p.nombre}</div>
+        ${!p.maestraOk ? '<div style="font-size:10px;color:var(--warn);margin-top:2px">⚠ No está en la data maestra</div>' : ''}
+      </td>
+      <td class="mono" style="font-size:11px">${p.sap}</td>
+      <td class="center"><span class="pill pill-${p.linea.toLowerCase()}">${p.linea}</span></td>
+      <td class="num">${fmtN(p.cantidad)}</td>
+      <td class="num">${p.embalaje || '—'}</td>
+      <td class="num"><b>${p.embalaje ? fmtN(p.canastillas) : '?'}</b></td>
+      <td class="num" style="color:var(--muted)">${p.embalaje ? fmtN(p.sueltas) : '—'}</td>
+      <td class="num">${fmtN(p.colegios)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Stats
+  const sel = state.productos.filter(p => p.selected);
+  const totCant = sel.reduce((s,p) => s + p.cantidad, 0);
+  const totCanast = sel.reduce((s,p) => s + p.canastillas + (p.sueltas > 0 ? 1 : 0), 0);
+  document.getElementById('prod-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${state.productos.length}</div><div class="stat-label">Productos detectados</div></div>
+    <div class="stat-card"><div class="stat-num">${sel.length}</div><div class="stat-label">Seleccionados</div></div>
+    <div class="stat-card"><div class="stat-num">${fmtN(totCant)}</div><div class="stat-label">Unidades total</div></div>
+    <div class="stat-card"><div class="stat-num">${fmtN(totCanast)}</div><div class="stat-label">Canastillas total</div></div>
+  `;
+
+  // Warnings
+  const sinMaestra = state.productos.filter(p => !p.maestraOk);
+  const colegiosFaltan = Object.values(state.colegios).filter(c => !c.enDirectorio);
+  const warnEl = document.getElementById('prod-warn');
+  let warnHtml = '';
+  if (sinMaestra.length) {
+    warnHtml += `<div class="msg msg-warn">⚠ ${sinMaestra.length} producto(s) no están en la data maestra. Se marcan con fondo naranja. En la app final, debes crearlos en <span class="mono">logistica_productos</span>. Para el prototipo puedes seguir sin ellos (no se calcularán canastillas).</div>`;
+  }
+  if (colegiosFaltan.length) {
+    const lista = colegiosFaltan.map(c => `${c.punto} — ${c.nombre}`).join('<br>');
+    warnHtml += `<div class="msg msg-warn">⚠ ${colegiosFaltan.length} colegio(s) no están en el directorio. Sus remisiones y ruteros saldrán con dirección "—". En la app final debes crearlos en <span class="mono">logistica_sitios</span>.<div style="margin-top:6px;font-size:11px;font-family:'DM Mono',monospace">${lista}</div></div>`;
+  }
+  warnEl.innerHTML = warnHtml;
+}
+
+function toggleProducto(sap, checked) {
+  const p = state.productos.find(x => x.sap === sap);
+  if (p) p.selected = checked;
+  renderProductos();
+}
+
+function toggleAllProductos(checked) {
+  const list = filterLinea === 'ALL' ? state.productos : state.productos.filter(p => p.linea === filterLinea);
+  list.forEach(p => p.selected = checked);
+  renderProductos();
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterLinea = btn.dataset.linea;
+    renderProductos();
+  });
+});
+
+function confirmProductos() {
+  const sel = state.productos.filter(p => p.selected);
+  if (!sel.length) { alert('Selecciona al menos un producto'); return; }
+  buildLocalidades();
+  gotoStep(4);
+}
+
+// =====================================================================================
+// PANEL 4 — ZONAS Y RUTAS
+// =====================================================================================
+function buildLocalidades() {
+  const ocsSet = new Set(state.ocs.filter(o => o.selected).map(o => o.numero));
+  const prodSet = new Set(state.productos.filter(p => p.selected).map(p => p.sap));
+  const filas = state.rawRows.filter(r => ocsSet.has(r.oc) && prodSet.has(r.sap));
+
+  const locMap = {};
+  filas.forEach(r => {
+    const loc = r.localidad || 'SIN LOCALIDAD';
+    if (!locMap[loc]) locMap[loc] = { nombre: loc, ptos: new Set(), cantidad: 0, canastillas: 0, _porProducto: {} };
+    locMap[loc].ptos.add(r.punto);
+    locMap[loc].cantidad += r.cantidad;
+    if (!locMap[loc]._porProducto[r.sap]) locMap[loc]._porProducto[r.sap] = 0;
+    locMap[loc]._porProducto[r.sap] += r.cantidad;
+  });
+
+  // Canastillas por localidad: suma de canastillas por producto + 1 por cada producto con sueltas
+  Object.values(locMap).forEach(l => {
+    let canast = 0;
+    Object.entries(l._porProducto).forEach(([sap, cant]) => {
+      const p = state.productos.find(x => x.sap === sap);
+      if (p && p.embalaje) {
+        canast += Math.floor(cant / p.embalaje);
+        if (cant % p.embalaje > 0) canast += 1;
+      }
+    });
+    l.canastillas = canast;
+  });
+
+  state.localidades = Object.values(locMap)
+    .map(l => ({
+      nombre: l.nombre,
+      ptos: l.ptos.size,
+      cantidad: l.cantidad,
+      canastillas: l.canastillas,
+      selected: l.nombre !== '#N/A' && l.nombre !== 'SIN LOCALIDAD',
+      numRutas: 1,
+      agrupar: false,
+      _porProducto: l._porProducto,
+    }))
+    .sort((a,b) => a.nombre.localeCompare(b.nombre));
+
+  reiniciarRutas();
+  renderZonas();
+}
+
+function renderZonas() {
+  const tbody = document.getElementById('zone-tbody');
+  tbody.innerHTML = '';
+  state.localidades.forEach(l => {
+    const tr = document.createElement('tr');
+    if (l.selected) tr.classList.add('selected');
+    const esInvalida = l.nombre === '#N/A' || l.nombre === 'SIN LOCALIDAD';
+    if (esInvalida) tr.classList.add('row-error');
+    tr.innerHTML = `
+      <td class="chk-cell"><input type="checkbox" ${l.selected?'checked':''} onchange="toggleZona('${l.nombre}', this.checked)"></td>
+      <td>
+        <div style="font-weight:500">${l.nombre}</div>
+        ${esInvalida ? '<div style="font-size:10px;color:var(--error);margin-top:2px">⚠ Localidad inválida — revisa el Excel</div>' : ''}
+      </td>
+      <td class="num">${fmtN(l.ptos)}</td>
+      <td class="num">${fmtN(l.cantidad)}</td>
+      <td class="num"><b>${fmtN(l.canastillas)}</b></td>
+      <td class="center"><input type="number" min="1" max="5" value="${l.numRutas}" style="width:60px;text-align:center" onchange="setNumRutas('${l.nombre}', this.value)"></td>
+      <td class="center"><input type="checkbox" ${l.agrupar?'checked':''} onchange="toggleAgrupar('${l.nombre}', this.checked)"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Stats
+  const sel = state.localidades.filter(l => l.selected);
+  const totCant = sel.reduce((s,l) => s + l.cantidad, 0);
+  const totCanast = sel.reduce((s,l) => s + l.canastillas, 0);
+  const totPtos = sel.reduce((s,l) => s + l.ptos, 0);
+  document.getElementById('zone-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${sel.length}</div><div class="stat-label">Localidades activas</div></div>
+    <div class="stat-card"><div class="stat-num">${fmtN(totPtos)}</div><div class="stat-label">Ptos entrega</div></div>
+    <div class="stat-card"><div class="stat-num">${fmtN(totCant)}</div><div class="stat-label">Unidades</div></div>
+    <div class="stat-card"><div class="stat-num">${fmtN(totCanast)}</div><div class="stat-label">Canastillas</div></div>
+    <div class="stat-card"><div class="stat-num">${state.rutas.length}</div><div class="stat-label">Rutas armadas</div></div>
+  `;
+
+  const invalidas = state.localidades.filter(l => l.nombre === '#N/A' || l.nombre === 'SIN LOCALIDAD');
+  const warnEl = document.getElementById('zone-warn');
+  if (invalidas.length) {
+    const ptos = invalidas.reduce((s,l) => s + l.ptos, 0);
+    warnEl.innerHTML = `<div class="msg msg-warn">⚠ Hay ${ptos} punto(s) sin localidad válida (${invalidas.map(l=>l.nombre).join(', ')}). No se incluirán a menos que los marques manualmente.</div>`;
+  } else {
+    warnEl.innerHTML = '';
+  }
+
+  renderRutasPreview();
+}
+
+function toggleZona(nombre, checked) {
+  const l = state.localidades.find(x => x.nombre === nombre);
+  if (l) l.selected = checked;
+  recalcRutasFromLocalidades();
+  renderZonas();
+}
+function setNumRutas(nombre, val) {
+  const l = state.localidades.find(x => x.nombre === nombre);
+  if (l) l.numRutas = Math.max(1, parseInt(val) || 1);
+  recalcRutasFromLocalidades();
+  renderZonas();
+}
+function toggleAgrupar(nombre, checked) {
+  const l = state.localidades.find(x => x.nombre === nombre);
+  if (l) l.agrupar = checked;
+  renderZonas();
+}
+function toggleAllZonas(checked) {
+  state.localidades.forEach(l => {
+    if (l.nombre !== '#N/A' && l.nombre !== 'SIN LOCALIDAD') l.selected = checked;
+  });
+  recalcRutasFromLocalidades();
+  renderZonas();
+}
+
+function reiniciarRutas() {
+  state.rutas = [];
+  const fechaInit = getFechaOcISO();
+  // Cada localidad seleccionada arma sus propias rutas (según numRutas)
+  state.localidades.filter(l => l.selected).forEach(l => {
+    for (let i = 1; i <= l.numRutas; i++) {
+      const nombreRuta = l.numRutas === 1 ? l.nombre : `${l.nombre} ${i}`;
+      state.rutas.push({
+        id: 'r-' + Math.random().toString(36).slice(2,9),
+        nombre: nombreRuta,
+        localidades: [l.nombre],
+        subruta: l.numRutas > 1 ? i : null,
+        conductor: '',
+        placa: '',
+        fechaDespacho: fechaInit,
+      });
+    }
+  });
+  autoAsignarColegios();
+  renderZonas();
+}
+
+function recalcRutasFromLocalidades() {
+  // Rutas actuales, preservar conductor/placa/fecha por nombre si existían
+  const prev = {};
+  state.rutas.forEach(r => { prev[r.nombre] = { conductor: r.conductor, placa: r.placa, fechaDespacho: r.fechaDespacho }; });
+  reiniciarRutas();
+  state.rutas.forEach(r => {
+    if (prev[r.nombre]) {
+      r.conductor = prev[r.nombre].conductor;
+      r.placa = prev[r.nombre].placa;
+      if (prev[r.nombre].fechaDespacho) r.fechaDespacho = prev[r.nombre].fechaDespacho;
+    }
+  });
+}
+
+function agruparSeleccionadas() {
+  const paraAgrupar = state.localidades.filter(l => l.agrupar && l.selected);
+  if (paraAgrupar.length < 2) {
+    alert('Marca al menos 2 localidades en la columna "Agrupar" para armarlas en una sola ruta.');
+    return;
+  }
+  // Verificar que cada una tenga numRutas = 1 (no permitimos agrupar localidades multi-ruta)
+  if (paraAgrupar.some(l => l.numRutas > 1)) {
+    alert('Solo se pueden agrupar localidades con 1 ruta cada una. Ajusta el número de rutas antes de agrupar.');
+    return;
+  }
+  // Remover las rutas existentes de esas localidades
+  const nombresAgrupar = paraAgrupar.map(l => l.nombre);
+  state.rutas = state.rutas.filter(r => !r.localidades.some(loc => nombresAgrupar.includes(loc)));
+  // Crear ruta agrupada
+  state.rutas.push({
+    id: 'r-' + Math.random().toString(36).slice(2,9),
+    nombre: nombresAgrupar.join(' + '),
+    localidades: nombresAgrupar,
+    subruta: null,
+    conductor: '',
+    placa: '',
+    fechaDespacho: getFechaOcISO(),
+  });
+  // Reset "agrupar" flag
+  paraAgrupar.forEach(l => l.agrupar = false);
+  autoAsignarColegios();
+  renderZonas();
+}
+
+function autoAsignarColegios() {
+  // Asignar colegios automáticamente:
+  //   - Si la localidad tiene 1 ruta → todos sus colegios van a esa ruta
+  //   - Si la localidad tiene N rutas → primer intento: sin asignar (usuario decide en paso 5)
+  state.colegiosAsignados = {};
+  const ocsSet = new Set(state.ocs.filter(o => o.selected).map(o => o.numero));
+  const prodSet = new Set(state.productos.filter(p => p.selected).map(p => p.sap));
+  const puntosPorLoc = {};
+  state.rawRows.filter(r => ocsSet.has(r.oc) && prodSet.has(r.sap)).forEach(r => {
+    if (!puntosPorLoc[r.localidad]) puntosPorLoc[r.localidad] = new Set();
+    puntosPorLoc[r.localidad].add(r.punto);
+  });
+
+  state.rutas.forEach(r => {
+    r.localidades.forEach(locNombre => {
+      const l = state.localidades.find(x => x.nombre === locNombre);
+      if (!l) return;
+      if (l.numRutas === 1) {
+        // Todos los colegios de esta localidad van a esta ruta
+        (puntosPorLoc[locNombre] ? [...puntosPorLoc[locNombre]] : []).forEach(punto => {
+          state.colegiosAsignados[punto] = r.id;
+        });
+      }
+    });
+  });
+}
+
+function renderRutasPreview() {
+  const cont = document.getElementById('rutas-preview');
+  if (!state.rutas.length) {
+    cont.innerHTML = '<div class="msg msg-info">Aún no hay rutas armadas. Marca localidades y ajusta cuántos carros necesita cada una.</div>';
+    return;
+  }
+  cont.innerHTML = state.rutas.map(r => {
+    // Calcular stats por ruta
+    let ptos = 0, cant = 0, canast = 0;
+    const canastPorProducto = {};
+    r.localidades.forEach(locNombre => {
+      const l = state.localidades.find(x => x.nombre === locNombre);
+      if (!l) return;
+      if (l.numRutas === 1) {
+        ptos += l.ptos;
+        cant += l.cantidad;
+        Object.entries(l._porProducto).forEach(([sap, c]) => {
+          canastPorProducto[sap] = (canastPorProducto[sap] || 0) + c;
+        });
+      }
+    });
+    Object.entries(canastPorProducto).forEach(([sap, c]) => {
+      const p = state.productos.find(x => x.sap === sap);
+      if (p && p.embalaje) {
+        canast += Math.floor(c / p.embalaje);
+        if (c % p.embalaje > 0) canast += 1;
+      }
+    });
+    return `
+      <div class="ruta-summary">
+        <div class="ruta-summary-head">
+          <h3>${r.nombre}</h3>
+          <button class="btn btn-sm btn-danger" onclick="borrarRuta('${r.id}')">✕ Borrar</button>
+        </div>
+        <div class="ruta-summary-info">
+          <span><b>${r.localidades.length}</b> localidad(es)</span>
+          <span><b>${ptos || '?'}</b> ptos</span>
+          <span><b>${fmtN(cant)}</b> unidades</span>
+          <span><b>${fmtN(canast)}</b> canastillas</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function borrarRuta(id) {
+  const r = state.rutas.find(x => x.id === id);
+  if (!r) return;
+  // Devolver las localidades como no-seleccionadas (o marcarlas sin ruta)
+  r.localidades.forEach(loc => {
+    const l = state.localidades.find(x => x.nombre === loc);
+    if (l) l.selected = false;
+  });
+  state.rutas = state.rutas.filter(x => x.id !== id);
+  autoAsignarColegios();
+  renderZonas();
+}
+
+function confirmZonas() {
+  if (!state.rutas.length) { alert('Debes armar al menos una ruta.'); return; }
+  buildDistribuir();
+  const necesitaDistribuir = state.localidades.some(l => l.selected && l.numRutas > 1);
+  if (necesitaDistribuir) gotoStep(5);
+  else gotoStep(6);
+  if (!necesitaDistribuir) buildConductores();
+}
+
+// =====================================================================================
+// PANEL 5 — DISTRIBUIR COLEGIOS
+// =====================================================================================
+function buildDistribuir() {
+  const body = document.getElementById('distribuir-body');
+  const necesitanDist = state.localidades.filter(l => l.selected && l.numRutas > 1);
+  if (!necesitanDist.length) {
+    body.innerHTML = '<div class="msg msg-ok">Ninguna localidad requiere distribución. Puedes continuar directamente.</div>';
+    return;
+  }
+  const ocsSet = new Set(state.ocs.filter(o => o.selected).map(o => o.numero));
+  const prodSet = new Set(state.productos.filter(p => p.selected).map(p => p.sap));
+
+  body.innerHTML = necesitanDist.map(l => {
+    // Buscar rutas de esta localidad
+    const rutasLoc = state.rutas.filter(r => r.localidades.includes(l.nombre));
+    const puntosLoc = new Set();
+    state.rawRows.filter(r => ocsSet.has(r.oc) && prodSet.has(r.sap) && r.localidad === l.nombre).forEach(r => puntosLoc.add(r.punto));
+    const puntosArr = [...puntosLoc].sort();
+    return `
+      <div class="ruta-detail">
+        <div class="ruta-detail-head">
+          <h3>${l.nombre}</h3>
+          <div class="head-meta">${l.numRutas} ruta(s) — ${puntosArr.length} colegios — ${fmtN(l.cantidad)} und</div>
+        </div>
+        <div class="localidad-block">
+          ${puntosArr.map(punto => {
+            const c = state.colegios[punto];
+            const asignado = state.colegiosAsignados[punto];
+            return `
+              <div class="col-row">
+                <div class="col-name">
+                  <b>${punto}</b> — ${c ? c.nombre : '?'}
+                </div>
+                <select onchange="asignarColegio('${punto}', this.value)">
+                  <option value="">— Sin asignar —</option>
+                  ${rutasLoc.map(r => `<option value="${r.id}" ${asignado===r.id?'selected':''}>${r.nombre}</option>`).join('')}
+                </select>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function asignarColegio(punto, rutaId) {
+  if (rutaId) state.colegiosAsignados[punto] = rutaId;
+  else delete state.colegiosAsignados[punto];
+}
+
+function confirmDistribucion() {
+  // Verificar que TODOS los colegios de localidades multi-ruta estén asignados
+  const necesitanDist = state.localidades.filter(l => l.selected && l.numRutas > 1);
+  const ocsSet = new Set(state.ocs.filter(o => o.selected).map(o => o.numero));
+  const prodSet = new Set(state.productos.filter(p => p.selected).map(p => p.sap));
+  const sinAsignar = [];
+  necesitanDist.forEach(l => {
+    state.rawRows.filter(r => ocsSet.has(r.oc) && prodSet.has(r.sap) && r.localidad === l.nombre).forEach(r => {
+      if (!state.colegiosAsignados[r.punto]) sinAsignar.push(r.punto);
+    });
+  });
+  if (sinAsignar.length) {
+    const unicos = [...new Set(sinAsignar)];
+    if (!confirm(`Hay ${unicos.length} colegio(s) sin asignar a ninguna ruta. ¿Continuar de todas formas? (Se ignorarán en la generación.)`)) return;
+  }
+  buildConductores();
+  gotoStep(6);
+}
+
+// =====================================================================================
+// PANEL 6 — CONDUCTORES
+// =====================================================================================
+function buildConductores() {
+  const body = document.getElementById('conductores-body');
+  if (!state.rutas.length) { body.innerHTML = '<div class="msg msg-err">No hay rutas armadas.</div>'; return; }
+  body.innerHTML = state.rutas.map(r => {
+    const stats = getStatsRuta(r);
+    return `
+      <div class="ruta-card">
+        <div class="ruta-head">
+          <input type="text" class="ruta-nombre" value="${r.nombre}" onchange="setRutaNombre('${r.id}', this.value)">
+          <div class="ruta-locs">${r.localidades.join(' · ')}</div>
+        </div>
+        <div class="ruta-stats">
+          <div class="st"><b>${stats.localidades}</b><span>Locs</span></div>
+          <div class="st"><b>${stats.ptos}</b><span>Ptos</span></div>
+          <div class="st"><b>${fmtN(stats.cant)}</b><span>Und</span></div>
+          <div class="st"><b>${fmtN(stats.canast)}</b><span>Canast</span></div>
+        </div>
+        <div class="ruta-inputs">
+          <div class="field">
+            <label>Conductor</label>
+            <input type="text" value="${r.conductor}" placeholder="Nombre del conductor" onchange="setRutaConductor('${r.id}', this.value)">
+          </div>
+          <div class="field">
+            <label>Placa</label>
+            <input type="text" value="${r.placa}" placeholder="Placa del vehículo" onchange="setRutaPlaca('${r.id}', this.value)">
+          </div>
+          <div class="field">
+            <label>Fecha de despacho</label>
+            <input type="date" value="${r.fechaDespacho || ''}" onchange="setRutaFecha('${r.id}', this.value)">
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getStatsRuta(r) {
+  const ocsSet = new Set(state.ocs.filter(o => o.selected).map(o => o.numero));
+  const prodSet = new Set(state.productos.filter(p => p.selected).map(p => p.sap));
+  const filas = state.rawRows.filter(x => ocsSet.has(x.oc) && prodSet.has(x.sap) && esRutaDelPunto(r, x.punto, x.localidad));
+  const puntos = new Set(filas.map(f => f.punto));
+  const cant = filas.reduce((s,f) => s + f.cantidad, 0);
+  const porProd = {};
+  filas.forEach(f => { porProd[f.sap] = (porProd[f.sap]||0) + f.cantidad; });
+  let canast = 0;
+  Object.entries(porProd).forEach(([sap, c]) => {
+    const p = state.productos.find(x => x.sap === sap);
+    if (p && p.embalaje) {
+      canast += Math.floor(c / p.embalaje);
+      if (c % p.embalaje > 0) canast += 1;
+    }
+  });
+  return { localidades: r.localidades.length, ptos: puntos.size, cant, canast };
+}
+
+function esRutaDelPunto(r, punto, localidad) {
+  if (!r.localidades.includes(localidad)) return false;
+  const loc = state.localidades.find(l => l.nombre === localidad);
+  if (!loc) return false;
+  if (loc.numRutas === 1) return true;
+  return state.colegiosAsignados[punto] === r.id;
+}
+
+function setRutaNombre(id, val) { const r = state.rutas.find(x => x.id === id); if (r) r.nombre = val; }
+function setRutaConductor(id, val) { const r = state.rutas.find(x => x.id === id); if (r) r.conductor = val; }
+function setRutaPlaca(id, val) { const r = state.rutas.find(x => x.id === id); if (r) r.placa = val; }
+function setRutaFecha(id, val) { const r = state.rutas.find(x => x.id === id); if (r) r.fechaDespacho = val; }
+
+function confirmConductores() {
+  const sinDatos = state.rutas.filter(r => !r.conductor || !r.placa);
+  if (sinDatos.length) {
+    if (!confirm(`${sinDatos.length} ruta(s) sin conductor o placa. ¿Continuar de todas formas?`)) return;
+  }
+  buildFinal();
+  gotoStep(7);
+}
+
+// =====================================================================================
+// PANEL 7 — GENERAR
+// =====================================================================================
+function buildFinal() {
+  document.getElementById('cfg-emision').value = new Date().toISOString().split('T')[0];
+  // Fecha de entrega: usar la primera OC seleccionada
+  const firstOc = state.ocs.find(o => o.selected);
+  if (firstOc && firstOc.fecha instanceof Date) {
+    document.getElementById('cfg-entrega').value = firstOc.fecha.toISOString().split('T')[0];
+  } else {
+    document.getElementById('cfg-entrega').value = new Date().toISOString().split('T')[0];
+  }
+
+  const body = document.getElementById('rutas-final');
+  body.innerHTML = state.rutas.map((r, idx) => {
+    const stats = getStatsRuta(r);
+    const filasRuta = getFilasRuta(r);
+    const colegios = new Set(filasRuta.map(f => f.punto));
+    return `
+      <div class="ruta-card">
+        <div class="ruta-head">
+          <div style="font-size:14px;font-weight:600;color:var(--accent)">${r.nombre}</div>
+          <div class="ruta-locs">${r.conductor || '<span style="color:var(--error)">Sin conductor</span>'} · ${r.placa || '<span style="color:var(--error)">Sin placa</span>'}</div>
+        </div>
+        <div class="ruta-stats">
+          <div class="st"><b>${colegios.size}</b><span>Remisiones</span></div>
+          <div class="st"><b>${fmtN(stats.cant)}</b><span>Und</span></div>
+          <div class="st"><b>${fmtN(stats.canast)}</b><span>Canast</span></div>
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="verRuta('${r.id}')">👁 Ver / Imprimir</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getFilasRuta(r) {
+  const ocsSet = new Set(state.ocs.filter(o => o.selected).map(o => o.numero));
+  const prodSet = new Set(state.productos.filter(p => p.selected).map(p => p.sap));
+  return state.rawRows.filter(x => ocsSet.has(x.oc) && prodSet.has(x.sap) && esRutaDelPunto(r, x.punto, x.localidad));
+}
+
+function reiniciarTodo() {
+  if (!confirm('¿Reiniciar todo el proceso? Perderás la configuración actual.')) return;
+  state.rawRows = []; state.ocs = []; state.productos = []; state.colegios = {}; state.localidades = []; state.rutas = []; state.colegiosAsignados = {};
+  document.getElementById('file-input').value = '';
+  document.getElementById('upload-msg').innerHTML = '';
+  gotoStep(1);
+}
+
+// =====================================================================================
+// PREVIEW / IMPRESIÓN
+// =====================================================================================
+function verRuta(rutaId) {
+  const r = state.rutas.find(x => x.id === rutaId);
+  if (!r) return;
+  const html = buildRutaHTML(r);
+  showPreview(`Ruta: ${r.nombre}`, html);
+}
+
+function verTodasRutas() {
+  const parts = state.rutas.map(r => buildRutaHTML(r));
+  showPreview(`Todas las rutas (${state.rutas.length})`, parts.join(''));
+}
+
+function showPreview(title, html) {
+  document.getElementById('main-view').classList.add('hidden');
+  document.getElementById('preview-view').classList.remove('hidden');
+  document.getElementById('preview-title').textContent = title;
+  document.getElementById('preview-mount').innerHTML = html;
+  document.getElementById('print-area').innerHTML = html;
+  window.scrollTo(0, 0);
+}
+
+function closePreview() {
+  document.getElementById('preview-view').classList.add('hidden');
+  document.getElementById('main-view').classList.remove('hidden');
+  document.getElementById('print-area').innerHTML = '';
+}
+
+// =====================================================================================
+// BUILD RUTERO + REMISIONES POR RUTA
+// =====================================================================================
+function buildRutaHTML(r) {
+  const filas = getFilasRuta(r);
+  if (!filas.length) return `<div class="print-page"><h2>Ruta ${r.nombre}</h2><p>Sin colegios asignados.</p></div>`;
+
+  const emision = document.getElementById('cfg-emision').value;
+  const entrega = document.getElementById('cfg-entrega').value;
+  const nroInicio = parseInt(document.getElementById('cfg-nro').value) || 1;
+  const fechaRutero = r.fechaDespacho || entrega;
+
+  const rutero = buildRuteroHTML(r, filas, fechaRutero);
+
+  // Remisiones: una por colegio, siempre valorizada
+  const puntosOrden = [...new Set(filas.map(f => f.punto))];
+  let remisiones = '';
+  puntosOrden.forEach((punto, idx) => {
+    const filasCol = filas.filter(f => f.punto === punto);
+    const nro = nroInicio + idx + (state.rutas.indexOf(r) * 100); // offset simple
+    remisiones += buildRemisionHTML(r, punto, filasCol, nro, emision, entrega);
+  });
+
+  return rutero + remisiones;
+}
+
+// =====================================================================================
+// RUTERO HTML — replica formato RF-FO-002-PD
+// =====================================================================================
+function buildRuteroHTML(r, filas, entrega) {
+  // Productos únicos en esta ruta, ordenados por SAP
+  const sapSet = [...new Set(filas.map(f => f.sap))].sort();
+  const productos = sapSet.map(sap => state.productos.find(p => p.sap === sap)).filter(Boolean);
+
+  // Colegios únicos
+  const puntos = [...new Set(filas.map(f => f.punto))];
+
+  // Matriz: por colegio, por producto → cantidad
+  const matriz = {};
+  puntos.forEach(p => { matriz[p] = {}; });
+  filas.forEach(f => {
+    matriz[f.punto][f.sap] = (matriz[f.punto][f.sap] || 0) + f.cantidad;
+  });
+
+  // Fila colegio: cantidad + canastillas/sueltas por producto
+  const filasRender = puntos.map(punto => {
+    const col = state.colegios[punto] || { punto, nombre: '?', direccion: '—' };
+    const rowData = productos.map(prod => {
+      const cant = matriz[punto][prod.sap] || 0;
+      const canast = prod.embalaje ? Math.floor(cant / prod.embalaje) : 0;
+      const sueltas = prod.embalaje ? (cant % prod.embalaje) : cant;
+      return { cant, canast, sueltas };
+    });
+    return { col, rowData };
+  });
+
+  // Totales por producto
+  const totales = productos.map(prod => {
+    const totCant = filasRender.reduce((s,f) => s + (f.rowData[productos.indexOf(prod)].cant || 0), 0);
+    let totCanast = 0, totSueltas = 0;
+    filasRender.forEach(f => {
+      const rd = f.rowData[productos.indexOf(prod)];
+      totCanast += rd.canast;
+      totSueltas += rd.sueltas;
+    });
+    // Sumar 1 canastilla extra si hay sueltas totales > 0
+    return { cant: totCant, canast: totCanast + (totSueltas > 0 ? 1 : 0), sueltas: totSueltas };
+  });
+
+  const totalUnidades = totales.reduce((s,t) => s + t.cant, 0);
+  const totalCanastillas = totales.reduce((s,t) => s + t.canast, 0);
+
+  // Padding: si menos de 20 colegios, agregar filas vacías
+  const numColRender = filasRender.length;
+  const filasVacias = Math.max(0, 20 - numColRender);
+
+  const numProd = productos.length;
+  // Nombre corto: parte antes del gramaje + el gramaje + el tipo de empaque (PQX20 vs UN)
+  const shortName = (n) => {
+    // Ejemplos:
+    //   "PAN DE BONO 40G-UN-SANTINO"        -> "PAN DE BONO<br>40G"
+    //   "PAN DE BONO 30G-PQX20UN-SANTINO"   -> "PAN DE BONO<br>30G PQX20"
+    //   "HOJALDRE QUESO Y BOCADILLO 87G-UN-CC" -> "HOJALDRE QUESO Y BOCADILLO<br>87G"
+    const m = n.match(/^(.+?)\s+([A-Z]?\d+G)(?:-(PQX\d+UN))?/);
+    if (m) {
+      const nombre = m[1];
+      const gramo = m[2];
+      const pack = m[3]; // 'PQX20UN' o undefined
+      if (pack) {
+        // Recortar el 'UN' final del pack: 'PQX20UN' → 'PQX20'
+        const packShort = pack.replace(/UN$/, '');
+        return `${nombre}<br>${gramo} ${packShort}`;
+      }
+      return `${nombre}<br>${gramo}`;
+    }
+    return n.length > 18 ? n.substring(0,18) + '…' : n;
+  };
+  // Fila 2 (REFERENCIA): 1 celda por producto (nombre) con rowspan=2
+  //                     (EMBALAJE): 1 celda por producto (nombre + embalaje) con colspan=2
+  const refProdHeaders = productos.map(p => `<th rowspan="2" style="width:55px;font-size:7pt">${shortName(p.nombre)}</th>`).join('');
+  const embProdHeaders = productos.map(p => `<th colspan="2" class="h-group" style="font-size:7pt">${shortName(p.nombre)}<br><span style="font-size:6pt;font-weight:400">${p.embalaje} UND</span></th>`).join('');
+  // Fila 3 (EMBALAJE subheaders): CANAST | UND por cada producto
+  const embSubHeaders = productos.map(() => `<th style="width:32px;font-size:6.5pt">CANAST</th><th style="width:28px;font-size:6.5pt">UND</th>`).join('');
+
+  return `
+<div class="print-page landscape">
+  <div class="rut-head">
+    <div class="rut-head-logo"><div class="logo-box">ALINNOVA</div></div>
+    <div class="rut-head-title">RUTERO SUMINISTRO PANADERÍA</div>
+    <div class="rut-head-code">
+      <div class="code-row"><div class="code-lbl">CÓDIGO</div><div class="code-val">RF-FO-002-PD</div></div>
+      <div class="code-row"><div class="code-lbl">VERSIÓN</div><div class="code-val">1</div></div>
+      <div class="code-row"><div class="code-lbl">F. ELABORACIÓN</div><div class="code-val">18/04/2024</div></div>
+    </div>
+  </div>
+
+  <div class="rut-info">
+    <div class="ri"><b>RUTA:</b> <span class="val">${r.nombre}</span></div>
+    <div class="ri"><b>CONDUCTOR:</b> <span class="val">${r.conductor || '________________'}</span></div>
+    <div class="ri"><b>PLACA:</b> <span class="val">${r.placa || '__________'}</span></div>
+  </div>
+
+  <table class="rut-table">
+    <thead>
+      <tr>
+        <th rowspan="3" style="width:55px">ID SITIO<br>ENTREGA</th>
+        <th rowspan="3" style="width:155px">NOMBRE INSTITUCIÓN<br>EDUCATIVA</th>
+        <th rowspan="3" style="width:135px">DIRECCIÓN DE ENTREGA</th>
+        <th colspan="${numProd}" class="h-group">REFERENCIA</th>
+        <th colspan="${numProd*2}" class="h-group">EMBALAJE POR REFERENCIA</th>
+      </tr>
+      <tr>
+        ${refProdHeaders}
+        ${embProdHeaders}
+      </tr>
+      <tr>
+        ${embSubHeaders}
+      </tr>
+    </thead>
+    <tbody>
+      ${filasRender.map(f => `
+        <tr>
+          <td class="mono">${f.col.punto}</td>
+          <td class="tdl">${f.col.nombre}</td>
+          <td class="tdl" style="font-size:7pt">${f.col.direccion || '—'}</td>
+          ${f.rowData.map(rd => `<td class="tdr">${rd.cant || ''}</td>`).join('')}
+          ${f.rowData.map(rd => `<td>${rd.canast || 0}</td><td>${rd.sueltas || 0}</td>`).join('')}
+        </tr>
+      `).join('')}
+      ${Array.from({length: filasVacias}).map(() => `
+        <tr>
+          <td>&nbsp;</td><td></td><td></td>
+          ${productos.map(() => `<td></td>`).join('')}
+          ${productos.map(() => `<td></td><td></td>`).join('')}
+        </tr>
+      `).join('')}
+      <tr class="total-row">
+        <td colspan="3" style="text-align:right">TOTAL</td>
+        ${totales.map(t => `<td>${fmtN(t.cant)}</td>`).join('')}
+        ${totales.map(t => `<td>${t.canast}</td><td>${t.sueltas}</td>`).join('')}
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="rut-foot">
+    <div class="foot-signs">
+      <div class="sign-row">
+        <div class="sf"><b>CONDUCTOR:</b> <span class="val" style="border-bottom:1px solid #000;display:inline-block;min-width:200px;padding:0 4px">${r.conductor||''}</span></div>
+        <div class="sf"><b>FIRMA:</b> <span class="val" style="border-bottom:1px solid #000;display:inline-block;min-width:180px">&nbsp;</span></div>
+      </div>
+      <div class="sign-row">
+        <div class="sf"><b>FECHA:</b> <span class="val" style="border-bottom:1px solid #000;display:inline-block;min-width:120px;padding:0 4px">${fmtDate(entrega)}</span></div>
+      </div>
+    </div>
+    <div class="foot-totals">
+      <table>
+        <tr><td class="lbl">TOTAL UNIDADES</td><td class="lbl">TOTAL CANASTILLAS</td></tr>
+        <tr><td class="val">${fmtN(totalUnidades)}</td><td class="val">${totalCanastillas}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="rut-lote">
+    <table>
+      <thead>
+        <tr><th style="width:40%">PRODUCTOS</th><th style="width:30%">FECHA DE VENCIMIENTO</th><th>LOTE</th></tr>
+      </thead>
+      <tbody>
+        ${productos.map(p => `<tr><td class="tdl">${p.nombre}</td><td></td><td></td></tr>`).join('')}
+        <tr><td class="tdl"><b>UNIDADES ADICIONALES</b></td><td colspan="2" style="text-align:left"><b>CANTIDAD:</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+  `;
+}
+
+// =====================================================================================
+// REMISION HTML — replica formato de PANADERIA
+// =====================================================================================
+function buildRemisionHTML(r, punto, filasCol, nro, emision, entrega) {
+  const col = state.colegios[punto] || { nombre: '?', localidad: '?', sede: '—', jornada: '—', horario: '—', direccion: '—' };
+  const oc = filasCol[0].oc;
+
+  // Agrupar por producto
+  const items = {};
+  filasCol.forEach(f => {
+    if (!items[f.sap]) items[f.sap] = { sap: f.sap, cant: 0 };
+    items[f.sap].cant += f.cantidad;
+  });
+  const itemsArr = Object.values(items).map(it => {
+    const prod = state.productos.find(p => p.sap === it.sap);
+    return {
+      sap: it.sap,
+      nombre: prod ? prod.nombre : it.sap,
+      cant: it.cant,
+      precio: prod ? prod.precio : 0,
+      total: (prod ? prod.precio : 0) * it.cant,
+    };
+  });
+  const totCant = itemsArr.reduce((s,i) => s + i.cant, 0);
+  const totVal = itemsArr.reduce((s,i) => s + i.total, 0);
+  const maxRows = 10;
+  while (itemsArr.length < maxRows) itemsArr.push({ sap:'', nombre:'', cant:'', precio:'', total:'' });
+
+  return `
+<div class="print-page rem-page">
+  <div class="rem-hdr">
+    <div class="rem-hdr-logo"><div class="logo-box">ALINNOVA</div></div>
+    <div class="rem-hdr-empresa">
+      <div class="he-line"><b>Razón Social:</b> ALINNOVA S.A.S &nbsp;&nbsp; <b>NIT:</b> 901.015.983-9</div>
+      <div class="he-line"><b>Dirección:</b> Cra. 69B 77 - 44 &nbsp;&nbsp; <b>TEL:</b> 310 309 50 96</div>
+      <div class="he-line"><b>Línea de Producción:</b> Panadería</div>
+    </div>
+    <div class="rem-hdr-num">
+      <div class="hn-titulo">REMISIÓN</div>
+      <div class="hn-line"><b>Nro</b> ${nro}</div>
+      <div class="hn-line"><b>FECHA</b> ${fmtDate(emision)}</div>
+      <div class="hn-line"><b>OC</b> ${oc}</div>
+      <div class="hn-copia val">COPIA VALORIZADA</div>
+    </div>
+  </div>
+
+  <div class="rem-inst">
+    <div><b>Institución:</b> ${col.nombre}</div>
+    <div><b>Sitio de Entrega:</b> ${col.sitio_entrega || col.nombre}</div>
+    <div><b>Dirección:</b> ${col.direccion || '—'}</div>
+    <div class="rem-inst-row">
+      <span><b>Id Punto Entrega:</b> ${col.punto}</span>
+      <span><b>Zona de Entrega:</b> ${col.localidad}</span>
+      <span><b>Sede Educativa:</b> ${col.sede || '—'}</span>
+    </div>
+    <div><b>Fecha de Entrega:</b> ${fmtDate(entrega)}</div>
+    <div><b>Ruta:</b> ${r.nombre} &nbsp;·&nbsp; <b>Conductor:</b> ${r.conductor || '—'} &nbsp;·&nbsp; <b>Placa:</b> ${r.placa || '—'}</div>
+  </div>
+
+  <table class="rem-tabla">
+    <thead>
+      <tr>
+        <th style="width:34px">ITEM</th>
+        <th>PRODUCTO</th>
+        <th style="width:80px">CANTIDAD<br>SOLICITADA</th>
+        <th style="width:80px">VALOR UNIT.</th>
+        <th style="width:95px">VALOR TOTAL</th>
+        <th style="width:70px">OBSERV.</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsArr.map((it,i) => `
+        <tr>
+          <td class="c-item">${it.sap ? (i+1) : ''}</td>
+          <td>${it.nombre}</td>
+          <td class="c-cant">${it.cant !== '' ? fmtN(it.cant) : ''}</td>
+          <td class="c-vu">${it.precio ? fmtP(it.precio) : ''}</td>
+          <td class="c-vt">${it.total ? fmtP(it.total) : ''}</td>
+          <td></td>
+        </tr>
+      `).join('')}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="tot-lbl" colspan="2"><b>TOTAL</b></td>
+        <td class="tot-cant"><b>${fmtN(totCant)}</b></td>
+        <td></td>
+        <td class="tot-vt"><b>${fmtP(totVal)}</b></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="rem-recibi">
+    <div class="rr-titulo"><u>RECIBI CONFORME</u></div>
+    <div class="rr-metodo">
+      Indique método de validación: <span class="chk"></span> conteo por unidad
+      &nbsp;&nbsp; <span class="chk"></span> conteo aleatorio
+    </div>
+    <div class="rr-firmas">
+      <div class="rr-fcell"><div class="rr-line"></div><div class="rr-lbl">NOMBRE Y APELLIDO</div></div>
+      <div class="rr-fcell"><div class="rr-line"></div><div class="rr-lbl">CARGO</div></div>
+      <div class="rr-fcell"><div class="rr-line"></div><div class="rr-lbl">TIPO Y No DOCUMENTO</div></div>
+      <div class="rr-fcell"><div class="rr-line"></div><div class="rr-lbl">FIRMA</div></div>
+    </div>
+    <div class="rr-legal">Con la firma de la presente remisión certifico haber recibido las cantidades aquí estipuladas y los productos en óptimas condiciones.</div>
+  </div>
+
+  <div class="rem-trans">
+    <div class="rt-title">DATOS DEL TRANSPORTADOR</div>
+    <div class="rt-grid">
+      <div class="rt-field"><label>Nombre:</label><div class="rt-line">${r.conductor || ''}</div></div>
+      <div class="rt-field"><label>Hora llegada:</label><div class="rt-line"></div></div>
+      <div class="rt-field"><label>Identificación:</label><div class="rt-line"></div></div>
+      <div class="rt-field"><label>Hora de salida:</label><div class="rt-line"></div></div>
+      <div class="rt-field"><label>Placa:</label><div class="rt-line">${r.placa || ''}</div></div>
+      <div class="rt-field"><label>Fecha de entrega:</label><div class="rt-line">${fmtDate(entrega)}</div></div>
+    </div>
+  </div>
+
+  <div class="rem-obs">
+    <div class="obs-left">
+      <b>Observaciones:</b>
+      <div class="obs-note">CANASTILLAS QUE INGRESAN: ___________ &nbsp;&nbsp;&nbsp; CANASTILLAS QUE SE RETIRAN: ___________</div>
+    </div>
+    <div class="obs-sign">
+      <div class="sl"></div>
+      FIRMA
+    </div>
+  </div>
+</div>
+  `;
+}
+
+// =====================================================================================
+// MODAL DATA MAESTRA (editable)
+// =====================================================================================
+function openMaestra() {
+  const tbody = document.getElementById('maestra-tbody');
+  tbody.innerHTML = Object.entries(PRODUCTOS_MAESTRA).map(([sap, p]) => `
+    <tr>
+      <td class="mono">${sap}</td>
+      <td>${p.nombre}</td>
+      <td class="center"><span class="pill pill-${p.linea.toLowerCase()}">${p.linea}</span></td>
+      <td class="num">
+        <input type="number" min="1" value="${p.embalaje}"
+          style="width:70px;text-align:right;padding:4px 6px"
+          onchange="updateMaestra('${sap}', 'embalaje', this.value)">
+      </td>
+      <td class="num">
+        <input type="number" min="0" value="${p.precio}"
+          style="width:100px;text-align:right;padding:4px 6px"
+          onchange="updateMaestra('${sap}', 'precio', this.value)">
+      </td>
+    </tr>
+  `).join('');
+  document.getElementById('maestra-modal').classList.remove('hidden');
+}
+
+function updateMaestra(sap, campo, valor) {
+  const num = parseInt(valor);
+  if (isNaN(num) || num < 0) return;
+  PRODUCTOS_MAESTRA[sap][campo] = num;
+  // Si ya hay productos cargados (paso 3+), actualizar los valores in-place
+  if (state.productos.length) {
+    const prod = state.productos.find(p => p.sap === sap);
+    if (prod) {
+      if (campo === 'embalaje') {
+        prod.embalaje = num;
+        prod.canastillas = num ? Math.floor(prod.cantidad / num) : 0;
+        prod.sueltas = num ? (prod.cantidad % num) : prod.cantidad;
+      } else if (campo === 'precio') {
+        prod.precio = num;
+      }
+    }
+  }
+}
+
+function closeMaestra() {
+  document.getElementById('maestra-modal').classList.add('hidden');
+  // Si estamos en el paso 3 (Productos), re-renderizar para reflejar los cambios
+  if (!document.getElementById('panel-3').classList.contains('hidden') && state.productos.length) {
+    renderProductos();
+  }
+  // Si estamos en el paso 4 (Zonas), recalcular canastillas por localidad y refrescar
+  if (!document.getElementById('panel-4').classList.contains('hidden') && state.localidades.length) {
+    buildLocalidades();
+  }
+}
+
+// =====================================================================================
+// INIT
+// =====================================================================================
+gotoStep(1);
+</script>
+</body>
+</html>
