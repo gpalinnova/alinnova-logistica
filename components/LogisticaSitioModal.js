@@ -14,8 +14,31 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
   const [activo, setActivo] = useState(sitio?.activo ?? true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   if (!open) return null
+
+  function handleSitioBlur() {
+    if (!nombreSitio.trim() && nombreInstitucion.trim()) setNombreSitio(nombreInstitucion.trim())
+  }
+
+  async function handleDelete() {
+    if (!sitio) return
+    const confirmado = window.confirm(`¿Eliminar el colegio ${sitio.punto_wms} - ${sitio.nombre_institucion} del directorio? Esta acción no se puede deshacer.`)
+    if (!confirmado) return
+    setDeleting(true)
+    setError('')
+    try {
+      const { error: delError } = await supabase.from('logistica_sitios').delete().eq('id', sitio.id)
+      if (delError) throw delError
+      onSaved()
+      onClose()
+    } catch (err) {
+      setError('No se pudo eliminar el colegio.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const opcionesLocalidad = localidadesDisponibles.includes('SIN LOCALIDAD')
     ? localidadesDisponibles
@@ -32,8 +55,16 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
       setError('El nombre de la institución es obligatorio')
       return
     }
+    if (!nombreSitio.trim()) {
+      setError('El sitio de entrega es obligatorio')
+      return
+    }
     if (!localidad.trim()) {
       setError('La localidad es obligatoria')
+      return
+    }
+    if (!direccion.trim()) {
+      setError('La dirección es obligatoria')
       return
     }
 
@@ -53,9 +84,9 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
       const payload = {
         punto_wms: puntoNum,
         nombre_institucion: nombreInstitucion.trim(),
-        nombre_sitio: nombreSitio.trim() || null,
+        nombre_sitio: nombreSitio.trim(),
         localidad: localidad.trim().toUpperCase(),
-        direccion: direccion.trim() || null,
+        direccion: direccion.trim(),
         sede_educativa: sedeEducativa.trim() || null,
         activo,
       }
@@ -80,7 +111,7 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box-lg" onClick={e => e.stopPropagation()}>
-        <div className="modal-title">{isEdit ? 'Editar Sitio' : 'Nuevo Sitio'}</div>
+        <div className="modal-title">{isEdit ? 'Editar colegio' : 'Agregar colegio'}</div>
         <form onSubmit={handleSubmit}>
           <div className="form-grid-2">
             <div className="form-group">
@@ -110,13 +141,13 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
           </div>
 
           <div className="form-group">
-            <label>Nombre institución</label>
+            <label>Institución</label>
             <input type="text" value={nombreInstitucion} onChange={e => setNombreInstitucion(e.target.value)} placeholder="Ej: COLEGIO COMPARTIR RECUERDO (IED)" />
           </div>
 
           <div className="form-group">
-            <label>Nombre sitio</label>
-            <input type="text" value={nombreSitio} onChange={e => setNombreSitio(e.target.value)} />
+            <label>Sitio de entrega</label>
+            <input type="text" value={nombreSitio} onChange={e => setNombreSitio(e.target.value)} onBlur={handleSitioBlur} />
           </div>
 
           <div className="form-grid-2">
@@ -138,9 +169,16 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
           </div>
 
           {error && <p className="modal-error">{error}</p>}
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>Cancelar</button>
-            <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+          <div className="modal-actions" style={{ justifyContent: isEdit ? 'space-between' : 'flex-end' }}>
+            {isEdit && (
+              <button type="button" className="btn-danger" onClick={handleDelete} disabled={saving || deleting}>
+                {deleting ? 'Eliminando...' : '🗑 Eliminar colegio'}
+              </button>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" className="btn-secondary" onClick={onClose} disabled={saving || deleting}>Cancelar</button>
+              <button type="submit" className="btn-primary" disabled={saving || deleting}>{saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Agregar colegio'}</button>
+            </div>
           </div>
         </form>
       </div>

@@ -3016,6 +3016,24 @@ button.nav-card {
 .wizard-col-select-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .wizard-sugerida-hint { font-size: 0.7rem; color: #9ca3af; white-space: nowrap; }
 
+.wizard-row-clickable { cursor: pointer; }
+.wizard-row-clickable:hover td { background: #f9fafb; }
+
+.wizard-ruta-habitual-sub { font-size: 0.7rem; color: #9ca3af; margin-top: 2px; }
+.wizard-ruta-habitual-media { color: #6b7280; }
+.wizard-ruta-habitual-baja { color: #9ca3af; }
+
+.wizard-paginador {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: 0.82rem;
+  color: #6b7280;
+  flex-wrap: wrap;
+}
+
 .sugerida-historico {
   background: #fff8e1;
   border: 1px solid #f0c674;

@@ -1,114 +1,119 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../../../../components/PageHeader'
+import LogisticaSitioModal from '../../../../components/LogisticaSitioModal'
+import LogisticaDirectorioExcelModal from '../../../../components/LogisticaDirectorioExcelModal'
 import { supabase } from '../../../../lib/supabase'
-import { readFileAsArrayBuffer } from '../../../../lib/parseRutasExcel'
-import { parsearExcelDirectorio, construirPreviewDirectorio } from '../../../../lib/logisticaDirectorioImport'
+import { getRutaHabitual } from '../../../../lib/logisticaAsignacionesQuery'
+
+const PAGE_SIZE = 50
+
+function RutaHabitualCell({ info }) {
+  if (!info) return <span className="logistica-muted">—</span>
+  if (info.confianza === 'alta') {
+    return (
+      <div>
+        <div>{info.ruta}</div>
+        <div className="wizard-ruta-habitual-sub">{info.frecuencia}/{info.totalDias} días</div>
+      </div>
+    )
+  }
+  if (info.confianza === 'media') {
+    return (
+      <div className="wizard-ruta-habitual-media">
+        <div>{info.ruta}</div>
+        <div className="wizard-ruta-habitual-sub">{info.frecuencia}/{info.totalDias} días</div>
+      </div>
+    )
+  }
+  return (
+    <div className="wizard-ruta-habitual-baja">
+      <div>{info.ruta}</div>
+      <div className="wizard-ruta-habitual-sub">basado en {info.totalDias} días</div>
+    </div>
+  )
+}
+
+function Paginador({ pagina, totalPaginas, total, onChange }) {
+  if (totalPaginas <= 1) return null
+  return (
+    <div className="wizard-paginador">
+      <span>Página {pagina} de {totalPaginas} · {total} colegio(s)</span>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn-secondary" disabled={pagina <= 1} onClick={() => onChange(pagina - 1)}>← Anterior</button>
+        <button className="btn-secondary" disabled={pagina >= totalPaginas} onClick={() => onChange(pagina + 1)}>Siguiente →</button>
+      </div>
+    </div>
+  )
+}
 
 export default function DirectorioColegiosPage() {
-  const [totalColegios, setTotalColegios] = useState(0)
-  const [conLocalidad, setConLocalidad] = useState(0)
-  const [cargandoContadores, setCargandoContadores] = useState(true)
-
-  const [estado, setEstado] = useState('inicial')
+  const [sitios, setSitios] = useState([])
+  const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
-  const [dragActive, setDragActive] = useState(false)
-  const [archivoNombre, setArchivoNombre] = useState('')
-  const [colegiosDetectados, setColegiosDetectados] = useState([])
-  const [preview, setPreview] = useState(null)
-  const [resultadoExito, setResultadoExito] = useState(null)
-  const fileInputRef = useRef(null)
+  const [search, setSearch] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const [rutaHabitualPorPunto, setRutaHabitualPorPunto] = useState({})
+  const [cargandoHabitual, setCargandoHabitual] = useState(false)
+  const [modalSitio, setModalSitio] = useState(null)
+  const [modalExcelAbierto, setModalExcelAbierto] = useState(false)
 
-  useEffect(() => { cargarContadores() }, [])
+  useEffect(() => { fetchSitios() }, [])
+  useEffect(() => { setPagina(1) }, [search])
 
-  async function cargarContadores() {
-    setCargandoContadores(true)
-    const [{ count: total }, { count: conLoc }] = await Promise.all([
-      supabase.from('logistica_sitios').select('id', { count: 'exact', head: true }),
-      supabase.from('logistica_sitios').select('id', { count: 'exact', head: true }).not('localidad', 'is', null).neq('localidad', 'SIN LOCALIDAD'),
-    ])
-    setTotalColegios(total || 0)
-    setConLocalidad(conLoc || 0)
-    setCargandoContadores(false)
-  }
-
-  function resetear() {
-    setEstado('inicial')
-    setErrorMsg('')
-    setArchivoNombre('')
-    setColegiosDetectados([])
-    setPreview(null)
-    setResultadoExito(null)
-  }
-
-  async function procesarArchivo(file) {
-    setEstado('parseando')
-    setErrorMsg('')
-    try {
-      const buffer = await readFileAsArrayBuffer(file)
-      const parsed = parsearExcelDirectorio(buffer)
-      if (parsed.colegios.length === 0) throw new Error('El archivo no contiene colegios válidos para importar.')
-
-      const { data: sitiosData, error: sitiosError } = await supabase
-        .from('logistica_sitios')
-        .select('punto_wms, bodega, cebe_sap, dane_12, dane_12_sede, nombre_institucion, nombre_sitio, cod_localidad, localidad, direccion')
-      if (sitiosError) throw new Error('No se pudieron consultar los sitios existentes.')
-
-      const previewResult = construirPreviewDirectorio(parsed.colegios, sitiosData || [])
-
-      setArchivoNombre(file.name)
-      setColegiosDetectados(parsed.colegios)
-      setPreview(previewResult)
-      setEstado('preview')
-    } catch (err) {
-      setErrorMsg(err.message || 'No se pudo procesar el archivo.')
-      setEstado('error')
+  async function fetchSitios() {
+    setLoading(true)
+    const { data, error } = await supabase.from('logistica_sitios').select('*').order('nombre_institucion')
+    if (error) {
+      setErrorMsg('No se pudieron cargar los colegios.')
+    } else {
+      setSitios(data || [])
+      setErrorMsg('')
+      cargarRutaHabitual(data || [])
     }
+    setLoading(false)
   }
 
-  function handleFileSelected(file) {
-    if (!file) return
-    if (!file.name.toLowerCase().endsWith('.xlsx')) {
-      setErrorMsg('Solo se aceptan archivos .xlsx')
-      setEstado('error')
-      return
-    }
-    procesarArchivo(file)
+  async function cargarRutaHabitual(lista) {
+    if (!lista.length) { setRutaHabitualPorPunto({}); return }
+    setCargandoHabitual(true)
+    const resultado = await getRutaHabitual(lista.map(s => s.punto_wms))
+    setRutaHabitualPorPunto(resultado)
+    setCargandoHabitual(false)
   }
 
-  function handleDragOver(e) { e.preventDefault(); setDragActive(true) }
-  function handleDragLeave(e) { e.preventDefault(); setDragActive(false) }
-  function handleDrop(e) {
-    e.preventDefault()
-    setDragActive(false)
-    handleFileSelected(e.dataTransfer.files?.[0])
-  }
-  function handleInputChange(e) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    handleFileSelected(file)
-  }
+  const localidadesUnicas = useMemo(
+    () => Array.from(new Set(sitios.map(s => s.localidad).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es')),
+    [sitios]
+  )
 
-  async function aplicarCambios() {
-    setEstado('confirmando')
-    setErrorMsg('')
-    try {
-      const { error } = await supabase
-        .from('logistica_sitios')
-        .upsert(preview.filasParaGuardar, { onConflict: 'punto_wms' })
-      if (error) throw new Error('No se pudo aplicar el directorio. No se modificó ningún registro.')
+  const filtrados = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    if (!term) return sitios
+    return sitios.filter(s => [s.nombre_institucion, String(s.punto_wms), s.localidad, s.nombre_sitio]
+      .some(v => v != null && String(v).toLowerCase().includes(term)))
+  }, [sitios, search])
 
-      setResultadoExito({
-        actualizados: preview.actualizaciones.length,
-        insertados: preview.inserciones.length,
-      })
-      setEstado('exito')
-      cargarContadores()
-    } catch (err) {
-      setErrorMsg(err.message || 'No se pudo aplicar el directorio.')
-      setEstado('error')
-    }
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
+  const paginaSegura = Math.min(pagina, totalPaginas)
+  const filasVisibles = filtrados.slice((paginaSegura - 1) * PAGE_SIZE, paginaSegura * PAGE_SIZE)
+
+  const conteo = useMemo(() => ({
+    totalColegios: sitios.length,
+    conLocalidad: sitios.filter(s => s.localidad && s.localidad !== 'SIN LOCALIDAD').length,
+    conRutaHabitual: sitios.filter(s => rutaHabitualPorPunto[String(s.punto_wms)]).length,
+  }), [sitios, rutaHabitualPorPunto])
+
+  function abrirNuevo() { setModalSitio({ sitio: null }) }
+  function abrirEditar(sitio) { setModalSitio({ sitio }) }
+  function cerrarModalSitio() { setModalSitio(null) }
+  async function handleSitioGuardado() { await fetchSitios() }
+
+  function cerrarModalExcel() { setModalExcelAbierto(false) }
+  async function handleExcelImportado() {
+    setModalExcelAbierto(false)
+    await fetchSitios()
   }
 
   return (
@@ -123,124 +128,87 @@ export default function DirectorioColegiosPage() {
         <div className="page-content">
           <div className="rem-stats-row">
             <div className="rem-stat-card">
-              <div className="rem-stat-num">{cargandoContadores ? '…' : totalColegios}</div>
+              <div className="rem-stat-num">{loading ? '…' : conteo.totalColegios}</div>
               <div className="rem-stat-label">Colegios en el directorio</div>
             </div>
             <div className="rem-stat-card">
-              <div className="rem-stat-num">{cargandoContadores ? '…' : conLocalidad}</div>
+              <div className="rem-stat-num">{loading ? '…' : conteo.conLocalidad}</div>
               <div className="rem-stat-label">Con localidad asignada</div>
+            </div>
+            <div className="rem-stat-card">
+              <div className="rem-stat-num">{loading || cargandoHabitual ? '…' : conteo.conRutaHabitual}</div>
+              <div className="rem-stat-label">Con ruta habitual detectada</div>
             </div>
           </div>
 
-          <h3 style={{ marginTop: 24 }}>Cargar directorio desde Excel</h3>
-
-          {estado === 'inicial' && (
-            <div
-              className={`dropzone ${dragActive ? 'dropzone-highlight' : ''}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="dropzone-icon">📚</div>
-              <div className="dropzone-text">Arrastra el Excel del directorio de colegios o haz clic para seleccionar</div>
+          <div className="page-toolbar spread">
+            <button className="btn-primary" onClick={abrirNuevo}>+ Agregar colegio</button>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button className="btn-secondary" onClick={() => setModalExcelAbierto(true)}>📥 Cargar desde Excel</button>
               <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx"
-                onChange={handleInputChange}
-                style={{ display: 'none' }}
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="🔎 Buscar por nombre, punto WMS o localidad..."
+                style={{ minWidth: 280 }}
               />
             </div>
-          )}
+          </div>
 
-          {estado === 'parseando' && (
-            <div className="empty-state"><p>Leyendo archivo Excel...</p></div>
-          )}
+          {errorMsg && <div className="form-error-banner">{errorMsg}</div>}
 
-          {estado === 'confirmando' && (
-            <div className="empty-state"><p>Aplicando cambios...</p></div>
-          )}
-
-          {estado === 'error' && (
+          {loading ? (
+            <div className="empty-state"><p>Cargando colegios...</p></div>
+          ) : filtrados.length === 0 ? (
+            <div className="empty-state"><p>{sitios.length === 0 ? 'No hay colegios cargados todavía.' : 'No hay colegios que coincidan con la búsqueda.'}</p></div>
+          ) : (
             <>
-              <div className="form-error-banner">{errorMsg}</div>
-              <div className="page-toolbar">
-                <button className="btn-primary" onClick={resetear}>🔄 Reintentar</button>
-              </div>
-            </>
-          )}
-
-          {estado === 'exito' && resultadoExito && (
-            <>
-              <div className="logistica-exito-box">
-                ✓ Directorio actualizado: {resultadoExito.actualizados} actualizados, {resultadoExito.insertados} insertados. Ningún colegio fue borrado.
-              </div>
-              <div className="page-toolbar" style={{ justifyContent: 'flex-start', gap: 12 }}>
-                <button className="btn-primary" onClick={resetear}>📚 Cargar otro archivo</button>
-              </div>
-            </>
-          )}
-
-          {estado === 'preview' && preview && (
-            <>
-              <div className="modal-hint">
-                <strong>Archivo:</strong> {archivoNombre}<br />
-                <strong>{colegiosDetectados.length} colegios detectados en el archivo.</strong>
-              </div>
-
-              <div className="rem-stats-row">
-                <div className="rem-stat-card">
-                  <div className="rem-stat-num">{preview.actualizaciones.length}</div>
-                  <div className="rem-stat-label">Colegios se ACTUALIZARÁN (ya existen por PUNTO WMS)</div>
-                </div>
-                <div className="rem-stat-card">
-                  <div className="rem-stat-num">{preview.inserciones.length}</div>
-                  <div className="rem-stat-label">Colegios se INSERTARÁN (nuevos)</div>
-                </div>
-              </div>
-
               <div className="data-table-wrap">
                 <table className="data-table">
                   <thead>
                     <tr>
                       <th>Punto WMS</th>
-                      <th>Institución educativa</th>
+                      <th>Institución</th>
                       <th>Sitio de entrega</th>
-                      <th>Cod. localidad</th>
                       <th>Localidad</th>
                       <th>Dirección</th>
+                      <th>Ruta habitual</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {colegiosDetectados.slice(0, 10).map(c => (
-                      <tr key={c.punto_wms}>
-                        <td className="logistica-mono">{c.punto_wms}</td>
-                        <td>{c.nombre_institucion}</td>
-                        <td>{c.nombre_sitio || '-'}</td>
-                        <td>{c.cod_localidad || '-'}</td>
-                        <td>{c.localidad || '-'}</td>
-                        <td>{c.direccion || '-'}</td>
+                    {filasVisibles.map(s => (
+                      <tr key={s.id} className="wizard-row-clickable" onClick={() => abrirEditar(s)}>
+                        <td className="logistica-mono">{s.punto_wms}</td>
+                        <td>{s.nombre_institucion}</td>
+                        <td>{s.nombre_sitio || <span className="logistica-muted">—</span>}</td>
+                        <td>{s.localidad}</td>
+                        <td>{s.direccion || <span className="logistica-muted">—</span>}</td>
+                        <td><RutaHabitualCell info={rutaHabitualPorPunto[String(s.punto_wms)]} /></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              {colegiosDetectados.length > 10 && (
-                <p className="modal-hint">Mostrando 10 de {colegiosDetectados.length} colegios detectados.</p>
-              )}
-
-              <div className="page-toolbar" style={{ justifyContent: 'flex-start', gap: 12 }}>
-                <button className="btn-secondary" onClick={resetear}>✕ Cancelar</button>
-                <button className="btn-primary" onClick={aplicarCambios}>
-                  💾 Aplicar cambios
-                </button>
-              </div>
+              <Paginador pagina={paginaSegura} totalPaginas={totalPaginas} total={filtrados.length} onChange={setPagina} />
             </>
           )}
         </div>
       </main>
+
+      {modalSitio && (
+        <LogisticaSitioModal
+          key={modalSitio.sitio?.id || 'new'}
+          open={Boolean(modalSitio)}
+          sitio={modalSitio.sitio}
+          localidadesDisponibles={localidadesUnicas}
+          onClose={cerrarModalSitio}
+          onSaved={handleSitioGuardado}
+        />
+      )}
+
+      {modalExcelAbierto && (
+        <LogisticaDirectorioExcelModal onClose={cerrarModalExcel} onImported={handleExcelImportado} />
+      )}
     </div>
   )
 }

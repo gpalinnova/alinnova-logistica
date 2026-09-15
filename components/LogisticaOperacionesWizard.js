@@ -10,6 +10,7 @@ import { readFileAsArrayBuffer } from '../lib/parseRutasExcel'
 import { parsearExcelWizard } from '../lib/logisticaWizardExcel'
 import { canastillasDe, fmtN } from '../lib/logisticaWizardCalc'
 import { esRefrigerioReforzado } from '../lib/logisticaOcImport'
+import { getRutaHabitual } from '../lib/logisticaAsignacionesQuery'
 
 const STEP_LABELS = ['Cargar OC', 'Seleccionar OC', 'Productos', 'Zonas y rutas', 'Distribuir', 'Conductores', 'Generar']
 
@@ -54,6 +55,7 @@ export default function LogisticaOperacionesWizard() {
   const [colegiosAsignados, setColegiosAsignados] = useState({})
   const [puntosSugeridos, setPuntosSugeridos] = useState(new Set())
   const [puntosConfirmados, setPuntosConfirmados] = useState(new Set())
+  const [sugerenciasInfo, setSugerenciasInfo] = useState({})
 
   const [config, setConfig] = useState({ nroInicio: 1, fechaEmision: '', fechaEntrega: '' })
   const [preview, setPreview] = useState(null)
@@ -149,7 +151,7 @@ export default function LogisticaOperacionesWizard() {
     if (!window.confirm('¿Reiniciar todo el proceso? Perderás la configuración actual.')) return
     setFileName(''); setFileError(''); setRawRows([]); setOcs([]); setProductos([])
     setColegios({}); setLocalidades([]); setRutas([]); setColegiosAsignados({})
-    setPuntosSugeridos(new Set()); setPuntosConfirmados(new Set())
+    setPuntosSugeridos(new Set()); setPuntosConfirmados(new Set()); setSugerenciasInfo({})
     setFilterLinea('todas')
     setStep(1)
   }
@@ -407,9 +409,10 @@ export default function LogisticaOperacionesWizard() {
   }
 
   // ============================== PASO 5 — DISTRIBUIR ==============================
-  // Al entrar al paso 5, busca en el histórico la última ruta conocida de cada
-  // colegio de una localidad multi-ruta y pre-llena el dropdown si el nombre
-  // de esa ruta hace match exacto con alguna de las rutas armadas hoy.
+  // Al entrar al paso 5, busca la "ruta habitual" de cada colegio de una
+  // localidad multi-ruta (moda de los últimos 30 días, ver
+  // lib/logisticaAsignacionesQuery.js) y pre-llena el dropdown si esa ruta
+  // hace match exacto con alguna de las rutas armadas hoy.
   useEffect(() => {
     if (step !== 5) return
     let cancelado = false
@@ -424,25 +427,20 @@ export default function LogisticaOperacionesWizard() {
       )).filter(p => !puntosConfirmados.has(p))
       if (!puntos.length) return
 
-      const { data, error } = await supabase
-        .from('logistica_asignaciones_historico')
-        .select('punto_wms, nombre_ruta, fecha')
-        .in('punto_wms', puntos)
-        .order('fecha', { ascending: false })
+      const habitual = await getRutaHabitual(puntos)
       if (cancelado) return
-      if (error) { console.error('No se pudo consultar el histórico de asignaciones:', error); return }
-
-      const ultimaPorPunto = new Map()
-      ;(data || []).forEach(row => { if (!ultimaPorPunto.has(row.punto_wms)) ultimaPorPunto.set(row.punto_wms, row.nombre_ruta) })
 
       const rutaIdPorNombre = new Map(rutas.map(r => [r.nombre, r.id]))
       const nuevasAsignaciones = {}
       const nuevosSugeridos = new Set()
-      ultimaPorPunto.forEach((nombreRuta, punto) => {
-        const rutaId = rutaIdPorNombre.get(nombreRuta)
+      const nuevaInfo = {}
+      Object.entries(habitual).forEach(([punto, info]) => {
+        if (!info) return
+        const rutaId = rutaIdPorNombre.get(info.ruta)
         if (!rutaId) return
         nuevasAsignaciones[punto] = rutaId
         nuevosSugeridos.add(punto)
+        nuevaInfo[punto] = info
       })
       if (!Object.keys(nuevasAsignaciones).length) return
 
@@ -454,9 +452,17 @@ export default function LogisticaOperacionesWizard() {
         return next
       })
       setPuntosSugeridos(prev => new Set([...prev, ...nuevosSugeridos]))
+      setSugerenciasInfo(prev => ({ ...prev, ...nuevaInfo }))
     })()
     return () => { cancelado = true }
   }, [step])
+
+  function formatoSugerencia(punto) {
+    const info = sugerenciasInfo[punto]
+    if (!info) return 'sugerido de la última asignación'
+    if (info.confianza === 'baja') return `sugerido · basado en ${info.totalDias} días`
+    return `sugerido · habitual ${info.frecuencia}/${info.totalDias} días`
+  }
 
   function asignarColegio(punto, rutaId) {
     setColegiosAsignados(prev => {
@@ -879,7 +885,7 @@ export default function LogisticaOperacionesWizard() {
                                 <option value="">— Sin asignar —</option>
                                 {rutasLoc.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                               </select>
-                              {sugerido && <span className="wizard-sugerida-hint">⚡ sugerido de la última asignación</span>}
+                              {sugerido && <span className="wizard-sugerida-hint">⚡ {formatoSugerencia(punto)}</span>}
                             </div>
                           </div>
                         )
