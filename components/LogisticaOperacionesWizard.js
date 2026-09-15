@@ -50,6 +50,8 @@ export default function LogisticaOperacionesWizard() {
   const [localidades, setLocalidades] = useState([])
   const [rutas, setRutas] = useState([])
   const [colegiosAsignados, setColegiosAsignados] = useState({})
+  const [puntosSugeridos, setPuntosSugeridos] = useState(new Set())
+  const [puntosConfirmados, setPuntosConfirmados] = useState(new Set())
 
   const [config, setConfig] = useState({ nroInicio: 1, fechaEmision: '', fechaEntrega: '' })
   const [preview, setPreview] = useState(null)
@@ -131,6 +133,7 @@ export default function LogisticaOperacionesWizard() {
     if (!window.confirm('¿Reiniciar todo el proceso? Perderás la configuración actual.')) return
     setFileName(''); setFileError(''); setRawRows([]); setOcs([]); setProductos([])
     setColegios({}); setLocalidades([]); setRutas([]); setColegiosAsignados({})
+    setPuntosSugeridos(new Set()); setPuntosConfirmados(new Set())
     setFilterLinea('todas')
     setStep(1)
   }
@@ -350,6 +353,57 @@ export default function LogisticaOperacionesWizard() {
   }
 
   // ============================== PASO 5 — DISTRIBUIR ==============================
+  // Al entrar al paso 5, busca en el histórico la última ruta conocida de cada
+  // colegio de una localidad multi-ruta y pre-llena el dropdown si el nombre
+  // de esa ruta hace match exacto con alguna de las rutas armadas hoy.
+  useEffect(() => {
+    if (step !== 5) return
+    let cancelado = false
+    ;(async () => {
+      const localidadesMulti = localidades.filter(l => l.selected && l.numRutas > 1)
+      if (!localidadesMulti.length) return
+      const ocsSet = new Set(ocs.filter(o => o.selected).map(o => o.numero))
+      const prodSet = new Set(productos.filter(p => p.selected).map(p => p.sap))
+      const nombresLoc = new Set(localidadesMulti.map(l => l.nombre))
+      const puntos = Array.from(new Set(
+        rawRows.filter(r => ocsSet.has(r.oc) && prodSet.has(r.sap) && nombresLoc.has(r.localidad)).map(r => r.punto)
+      )).filter(p => !puntosConfirmados.has(p))
+      if (!puntos.length) return
+
+      const { data, error } = await supabase
+        .from('logistica_asignaciones_historico')
+        .select('punto_wms, nombre_ruta, fecha')
+        .in('punto_wms', puntos)
+        .order('fecha', { ascending: false })
+      if (cancelado) return
+      if (error) { console.error('No se pudo consultar el histórico de asignaciones:', error); return }
+
+      const ultimaPorPunto = new Map()
+      ;(data || []).forEach(row => { if (!ultimaPorPunto.has(row.punto_wms)) ultimaPorPunto.set(row.punto_wms, row.nombre_ruta) })
+
+      const rutaIdPorNombre = new Map(rutas.map(r => [r.nombre, r.id]))
+      const nuevasAsignaciones = {}
+      const nuevosSugeridos = new Set()
+      ultimaPorPunto.forEach((nombreRuta, punto) => {
+        const rutaId = rutaIdPorNombre.get(nombreRuta)
+        if (!rutaId) return
+        nuevasAsignaciones[punto] = rutaId
+        nuevosSugeridos.add(punto)
+      })
+      if (!Object.keys(nuevasAsignaciones).length) return
+
+      setColegiosAsignados(prev => {
+        const next = { ...prev }
+        Object.entries(nuevasAsignaciones).forEach(([punto, rutaId]) => {
+          if (!next[punto]) next[punto] = rutaId
+        })
+        return next
+      })
+      setPuntosSugeridos(prev => new Set([...prev, ...nuevosSugeridos]))
+    })()
+    return () => { cancelado = true }
+  }, [step])
+
   function asignarColegio(punto, rutaId) {
     setColegiosAsignados(prev => {
       const next = { ...prev }
@@ -357,9 +411,31 @@ export default function LogisticaOperacionesWizard() {
       else delete next[punto]
       return next
     })
+    marcarConfirmado(punto)
   }
 
-  function confirmDistribucion() {
+  function marcarConfirmado(punto) {
+    setPuntosConfirmados(prev => (prev.has(punto) ? prev : new Set(prev).add(punto)))
+    setPuntosSugeridos(prev => {
+      if (!prev.has(punto)) return prev
+      const next = new Set(prev)
+      next.delete(punto)
+      return next
+    })
+  }
+
+  async function guardarAsignacionesHistorico() {
+    const nombrePorRutaId = new Map(rutas.map(r => [r.id, r.nombre]))
+    const fecha = new Date().toISOString()
+    const rows = Object.entries(colegiosAsignados)
+      .map(([punto_wms, rutaId]) => ({ punto_wms, nombre_ruta: nombrePorRutaId.get(rutaId), fecha }))
+      .filter(r => r.nombre_ruta)
+    if (!rows.length) return
+    const { error } = await supabase.from('logistica_asignaciones_historico').insert(rows)
+    if (error) console.error('No se pudo guardar el histórico de asignaciones colegio-ruta:', error)
+  }
+
+  async function confirmDistribucion() {
     const necesitanDist = localidades.filter(l => l.selected && l.numRutas > 1)
     const ocsSet = new Set(ocs.filter(o => o.selected).map(o => o.numero))
     const prodSet = new Set(productos.filter(p => p.selected).map(p => p.sap))
@@ -373,6 +449,7 @@ export default function LogisticaOperacionesWizard() {
       const unicos = Array.from(new Set(sinAsignar))
       if (!window.confirm(`Hay ${unicos.length} colegio(s) sin asignar a ninguna ruta. ¿Continuar de todas formas? (Se ignorarán en la generación.)`)) return
     }
+    await guardarAsignacionesHistorico()
     setStep(6)
   }
 
@@ -716,13 +793,22 @@ export default function LogisticaOperacionesWizard() {
                       {puntosLoc.map(punto => {
                         const c = colegios[punto]
                         const asignado = colegiosAsignados[punto]
+                        const sugerido = puntosSugeridos.has(punto)
                         return (
                           <div key={punto} className="wizard-col-row">
                             <div><b>{punto}</b> — {c ? c.nombre : '?'}</div>
-                            <select value={asignado || ''} onChange={e => asignarColegio(punto, e.target.value)}>
-                              <option value="">— Sin asignar —</option>
-                              {rutasLoc.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                            </select>
+                            <div className="wizard-col-select-wrap">
+                              <select
+                                className={sugerido ? 'sugerida-historico' : ''}
+                                value={asignado || ''}
+                                onChange={e => asignarColegio(punto, e.target.value)}
+                                onBlur={() => marcarConfirmado(punto)}
+                              >
+                                <option value="">— Sin asignar —</option>
+                                {rutasLoc.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                              </select>
+                              {sugerido && <span className="wizard-sugerida-hint">⚡ sugerido de la última asignación</span>}
+                            </div>
                           </div>
                         )
                       })}

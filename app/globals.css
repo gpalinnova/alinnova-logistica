@@ -2994,6 +2994,14 @@ button.nav-card {
 .wizard-col-row:last-child { border-bottom: none; }
 .wizard-col-row select { min-width: 160px; padding: 6px 8px; border: 1.5px solid #d1d5db; border-radius: 6px; }
 
+.wizard-col-select-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.wizard-sugerida-hint { font-size: 0.7rem; color: #9ca3af; white-space: nowrap; }
+
+.sugerida-historico {
+  background: #fff8e1;
+  border: 1px solid #f0c674;
+}
+
 .wizard-ruta-card { padding: 14px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 .wizard-ruta-card-head { flex: 1; min-width: 220px; }
 .wizard-ruta-nombre {
