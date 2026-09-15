@@ -16,8 +16,6 @@ const LINEA_INFO = {
   am_pm: { label: 'AM-PM', pill: 'logistica-pill-ampm' },
   gastronomia: { label: 'Gastronomía', pill: 'logistica-pill-gastronomia' },
 }
-const LINEA_PANTALLA = { panaderia: 'Panadería', gastronomia: 'Gastronomía' }
-
 function matchesFilter(p, filtro) {
   if (filtro === 'todas') return true
   if (filtro === 'sin_clasificar') return !p.maestraOk
@@ -30,8 +28,7 @@ function LineaPill({ linea }) {
   return <span className={`logistica-pill ${info.pill}`}>{info.label}</span>
 }
 
-export default function LogisticaOperacionesWizard({ lineaDefault }) {
-  const tituloLinea = LINEA_PANTALLA[lineaDefault] || 'Logística'
+export default function LogisticaOperacionesWizard() {
   const [step, setStep] = useState(1)
 
   const [loadingMaestra, setLoadingMaestra] = useState(true)
@@ -47,7 +44,7 @@ export default function LogisticaOperacionesWizard({ lineaDefault }) {
   const [ocs, setOcs] = useState([])
 
   const [productos, setProductos] = useState([])
-  const [filterLinea, setFilterLinea] = useState(lineaDefault)
+  const [filterLinea, setFilterLinea] = useState('todas')
 
   const [colegios, setColegios] = useState({})
   const [localidades, setLocalidades] = useState([])
@@ -134,7 +131,7 @@ export default function LogisticaOperacionesWizard({ lineaDefault }) {
     if (!window.confirm('¿Reiniciar todo el proceso? Perderás la configuración actual.')) return
     setFileName(''); setFileError(''); setRawRows([]); setOcs([]); setProductos([])
     setColegios({}); setLocalidades([]); setRutas([]); setColegiosAsignados({})
-    setFilterLinea(lineaDefault)
+    setFilterLinea('todas')
     setStep(1)
   }
 
@@ -193,7 +190,7 @@ export default function LogisticaOperacionesWizard({ lineaDefault }) {
         linea: maestra ? maestra.modalidad : null,
         precio: maestra ? (maestra.valor_unitario || 0) : 0,
         colegios: p.colegios.size,
-        selected: maestra ? maestra.modalidad === lineaDefault : false,
+        selected: true,
         maestraOk: Boolean(maestra),
       }
     })
@@ -440,9 +437,9 @@ export default function LogisticaOperacionesWizard({ lineaDefault }) {
     <div className="app-layout">
       <main className="main-content">
         <PageHeader
-          backHref="/logistica/operaciones"
+          backHref="/logistica"
           backLabel="Volver"
-          title={`📅 Operaciones del Día — ${tituloLinea}`}
+          title="📅 Operaciones del Día — Logística"
           subtitle="Wizard de OC → rutero → remisiones"
         />
         <div className="page-content">
@@ -479,7 +476,7 @@ export default function LogisticaOperacionesWizard({ lineaDefault }) {
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="dropzone-icon">🥖</div>
-                  <div className="dropzone-text">Arrastra el Excel de OC de {tituloLinea} aquí o haz clic para seleccionar</div>
+                  <div className="dropzone-text">Arrastra el Excel de OC aquí o haz clic para seleccionar</div>
                   <div className="dropzone-hint">Formato: columnas Punto · Numero OC · Nombre_Bodega · Articulo · Nombre · Cantidad · Localidad</div>
                   <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.xlsm" onChange={handleInputChange} style={{ display: 'none' }} />
                 </div>
@@ -843,7 +840,6 @@ export default function LogisticaOperacionesWizard({ lineaDefault }) {
           datos={preview.datos}
           colegios={colegios}
           config={config}
-          lineaLabel={tituloLinea}
           rutasIndex={rutasIndex}
           onClose={() => setPreview(null)}
         />

@@ -7,6 +7,18 @@ import { fmtDateCorta } from '../lib/logisticaWizardExcel'
 
 const COL_FALLBACK = { nombre: '?', direccion: '—', localidad: '—', sedeEducativa: '—', sitioEntrega: '?' }
 
+const LINEA_LABEL = { panaderia: 'Panadería', am_pm: 'AM-PM', gastronomia: 'Gastronomía' }
+
+// La OC llega con líneas mezcladas, así que la línea de producción del
+// rutero/remisión se calcula a partir de los productos que realmente
+// contiene esa ruta/entrega, no de una pantalla fija.
+function lineaLabelDeFilas(filas) {
+  const set = new Set()
+  filas.forEach(f => { if (f.producto?.linea) set.add(LINEA_LABEL[f.producto.linea] || f.producto.linea) })
+  if (!set.size) return 'Sin clasificar'
+  return Array.from(set).join(' / ')
+}
+
 function construirRutero(ruta, filas, colegios) {
   const productosPorSap = new Map()
   filas.forEach(f => { if (!productosPorSap.has(f.sap)) productosPorSap.set(f.sap, f.producto) })
@@ -50,9 +62,10 @@ function shortName(producto) {
   return producto.nombre || producto.nombreCompleto || producto.sap
 }
 
-function RuteroPage({ ruta, filas, colegios, fechaEntrega, lineaLabel }) {
+function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
   const { productos, filasRender, totales, totalUnidades, totalCanastillas } = construirRutero(ruta, filas, colegios)
   const numProd = productos.length
+  const lineaLabel = lineaLabelDeFilas(filas)
 
   if (!filas.length) {
     return (
@@ -164,9 +177,10 @@ function RuteroPage({ ruta, filas, colegios, fechaEntrega, lineaLabel }) {
   )
 }
 
-function RemisionPage({ ruta, punto, filasCol, nro, fechaEmision, fechaEntrega, colegios, lineaLabel }) {
+function RemisionPage({ ruta, punto, filasCol, nro, fechaEmision, fechaEntrega, colegios }) {
   const col = colegios[punto] || { ...COL_FALLBACK, punto }
   const oc = filasCol[0]?.oc
+  const lineaLabel = lineaLabelDeFilas(filasCol)
 
   const itemsMap = new Map()
   filasCol.forEach(f => {
@@ -288,7 +302,7 @@ function RemisionPage({ ruta, punto, filasCol, nro, fechaEmision, fechaEntrega, 
 
 // datos: [{ ruta, filas }] — filas ya incluyen .producto resuelto
 // rutasIndex: Map ruta.id -> índice en la lista completa de rutas (numeración de remisión)
-export default function LogisticaWizardPrint({ titulo, datos, colegios, config, lineaLabel, rutasIndex, onClose }) {
+export default function LogisticaWizardPrint({ titulo, datos, colegios, config, rutasIndex, onClose }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
@@ -318,7 +332,7 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
           filas.forEach(f => { if (!vistos.has(f.punto)) { vistos.add(f.punto); puntosOrden.push(f.punto) } })
           return (
             <div key={ruta.id}>
-              <RuteroPage ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={ruta.fechaDespacho || config.fechaEntrega} lineaLabel={lineaLabel} />
+              <RuteroPage ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={ruta.fechaDespacho || config.fechaEntrega} />
               {puntosOrden.map((punto, idx) => {
                 const filasCol = filas.filter(f => f.punto === punto)
                 const nro = nroInicio + idx + rutaIdx * 100
@@ -332,7 +346,6 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
                     fechaEmision={config.fechaEmision}
                     fechaEntrega={config.fechaEntrega}
                     colegios={colegios}
-                    lineaLabel={lineaLabel}
                   />
                 )
               })}
