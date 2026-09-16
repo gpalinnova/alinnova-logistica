@@ -43,13 +43,10 @@ function construirRutero(ruta, filas, colegios) {
   })
 
   const totales = productos.map((prod, pi) => {
-    let totCant = 0, totCanast = 0, totSueltas = 0
-    filasRender.forEach(f => {
-      totCant += f.rowData[pi].cant
-      totCanast += f.rowData[pi].canast
-      totSueltas += f.rowData[pi].sueltas
-    })
-    return { cant: totCant, canast: totCanast + (totSueltas > 0 ? 1 : 0), sueltas: totSueltas }
+    let totCant = 0
+    filasRender.forEach(f => { totCant += f.rowData[pi].cant })
+    const { base, sueltas } = canastillasDe(totCant, prod.embalaje)
+    return { cant: totCant, canast: base, sueltas }
   })
 
   const totalUnidades = totales.reduce((s, t) => s + t.cant, 0)
