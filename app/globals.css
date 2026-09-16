@@ -3023,6 +3023,21 @@ button.nav-card {
 .wizard-ruta-habitual-media { color: #6b7280; }
 .wizard-ruta-habitual-baja { color: #9ca3af; }
 
+.ruta-habitual-cell { cursor: pointer; border-radius: 6px; padding: 4px 6px; margin: -4px -6px; }
+.ruta-habitual-cell:hover { background: #f3f1f7; }
+
+.ruta-habitual-input {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1.5px solid #3D1F3D;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a2e;
+}
+.ruta-habitual-input:focus { outline: none; }
+
 .wizard-paginador {
   display: flex;
   justify-content: space-between;

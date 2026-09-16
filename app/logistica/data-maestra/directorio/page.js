@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import PageHeader from '../../../../components/PageHeader'
 import LogisticaSitioModal from '../../../../components/LogisticaSitioModal'
 import LogisticaDirectorioExcelModal from '../../../../components/LogisticaDirectorioExcelModal'
@@ -9,7 +9,7 @@ import { getRutaHabitual } from '../../../../lib/logisticaAsignacionesQuery'
 
 const PAGE_SIZE = 50
 
-function RutaHabitualCell({ info }) {
+function RutaHabitualValor({ info }) {
   if (!info) return <span className="logistica-muted">—</span>
   if (info.confianza === 'alta') {
     return (
@@ -31,6 +31,77 @@ function RutaHabitualCell({ info }) {
     <div className="wizard-ruta-habitual-baja">
       <div>{info.ruta}</div>
       <div className="wizard-ruta-habitual-sub">basado en {info.totalDias} días</div>
+    </div>
+  )
+}
+
+function RutaHabitualCell({ sitio, info, onGuardado, onError }) {
+  const [editando, setEditando] = useState(false)
+  const [valor, setValor] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const cancelarRef = useRef(false)
+
+  function iniciarEdicion(e) {
+    e.stopPropagation()
+    if (editando) return
+    cancelarRef.current = false
+    setValor(info?.ruta || '')
+    setEditando(true)
+  }
+
+  function cancelar() {
+    cancelarRef.current = true
+    setEditando(false)
+  }
+
+  async function confirmar() {
+    if (cancelarRef.current) { cancelarRef.current = false; return }
+    const nombreRuta = valor.trim()
+    if (!nombreRuta) {
+      setEditando(false)
+      return
+    }
+    setGuardando(true)
+    const punto_wms = String(sitio.punto_wms)
+    const { error } = await supabase
+      .from('logistica_asignaciones_historico')
+      .insert({ punto_wms, nombre_ruta: nombreRuta, fecha: new Date().toISOString() })
+    setGuardando(false)
+    if (error) {
+      console.error('No se pudo guardar la ruta habitual:', error)
+      onError?.('No se pudo guardar la ruta habitual, intenta de nuevo')
+      return
+    }
+    const resultado = await getRutaHabitual([punto_wms])
+    onGuardado?.(punto_wms, resultado[punto_wms])
+    setEditando(false)
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') e.currentTarget.blur()
+    else if (e.key === 'Escape') { e.stopPropagation(); cancelar() }
+  }
+
+  if (!editando) {
+    return (
+      <div className="ruta-habitual-cell" onClick={iniciarEdicion}>
+        <RutaHabitualValor info={info} />
+      </div>
+    )
+  }
+
+  return (
+    <div onClick={e => e.stopPropagation()}>
+      <input
+        type="text"
+        autoFocus
+        className="ruta-habitual-input"
+        value={valor}
+        disabled={guardando}
+        onChange={e => setValor(e.target.value)}
+        onBlur={confirmar}
+        onKeyDown={handleKeyDown}
+      />
     </div>
   )
 }
@@ -58,9 +129,19 @@ export default function DirectorioColegiosPage() {
   const [cargandoHabitual, setCargandoHabitual] = useState(false)
   const [modalSitio, setModalSitio] = useState(null)
   const [modalExcelAbierto, setModalExcelAbierto] = useState(false)
+  const [toastMsg, setToastMsg] = useState('')
 
   useEffect(() => { fetchSitios() }, [])
   useEffect(() => { setPagina(1) }, [search])
+  useEffect(() => {
+    if (!toastMsg) return
+    const t = setTimeout(() => setToastMsg(''), 3500)
+    return () => clearTimeout(t)
+  }, [toastMsg])
+
+  function handleRutaHabitualGuardada(punto, info) {
+    setRutaHabitualPorPunto(prev => ({ ...prev, [punto]: info }))
+  }
 
   async function fetchSitios() {
     setLoading(true)
@@ -183,7 +264,14 @@ export default function DirectorioColegiosPage() {
                         <td>{s.nombre_sitio || <span className="logistica-muted">—</span>}</td>
                         <td>{s.localidad}</td>
                         <td>{s.direccion || <span className="logistica-muted">—</span>}</td>
-                        <td><RutaHabitualCell info={rutaHabitualPorPunto[String(s.punto_wms)]} /></td>
+                        <td>
+                          <RutaHabitualCell
+                            sitio={s}
+                            info={rutaHabitualPorPunto[String(s.punto_wms)]}
+                            onGuardado={handleRutaHabitualGuardada}
+                            onError={setToastMsg}
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -209,6 +297,8 @@ export default function DirectorioColegiosPage() {
       {modalExcelAbierto && (
         <LogisticaDirectorioExcelModal onClose={cerrarModalExcel} onImported={handleExcelImportado} />
       )}
+
+      {toastMsg && <div className="toast toast-error">{toastMsg}</div>}
     </div>
   )
 }
