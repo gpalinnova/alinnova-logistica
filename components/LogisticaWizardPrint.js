@@ -45,12 +45,12 @@ function construirRutero(ruta, filas, colegios) {
   const totales = productos.map((prod, pi) => {
     let totCant = 0
     filasRender.forEach(f => { totCant += f.rowData[pi].cant })
-    const { base, sueltas } = canastillasDe(totCant, prod.embalaje)
-    return { cant: totCant, canast: base, sueltas }
+    const { base, sueltas, total } = canastillasDe(totCant, prod.embalaje)
+    return { cant: totCant, canast: base, sueltas, canastTotal: total }
   })
 
   const totalUnidades = totales.reduce((s, t) => s + t.cant, 0)
-  const totalCanastillas = totales.reduce((s, t) => s + t.canast, 0)
+  const totalCanastillas = totales.reduce((s, t) => s + t.canastTotal, 0)
 
   return { productos, filasRender, totales, totalUnidades, totalCanastillas }
 }
