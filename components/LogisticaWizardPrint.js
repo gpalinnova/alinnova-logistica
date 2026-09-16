@@ -59,7 +59,7 @@ function shortName(producto) {
   return producto.nombre || producto.nombreCompleto || producto.sap
 }
 
-function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
+export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
   const { productos, filasRender, totales, totalUnidades, totalCanastillas } = construirRutero(ruta, filas, colegios)
   const numProd = productos.length
   const lineaLabel = lineaLabelDeFilas(filas)

@@ -11,6 +11,7 @@ import { parsearExcelWizard } from '../lib/logisticaWizardExcel'
 import { canastillasDe, fmtN } from '../lib/logisticaWizardCalc'
 import { esRefrigerioReforzado } from '../lib/logisticaOcImport'
 import { getRutaHabitual } from '../lib/logisticaAsignacionesQuery'
+import { descargarRuterosPdf } from '../lib/logisticaRuteroPdfDownload'
 
 const STEP_LABELS = ['Cargar OC', 'Seleccionar OC', 'Productos', 'Zonas y rutas', 'Distribuir', 'Conductores', 'Generar']
 
@@ -60,6 +61,8 @@ export default function LogisticaOperacionesWizard() {
   const [config, setConfig] = useState({ nroInicio: 1, fechaEmision: '', fechaEntrega: '' })
   const [preview, setPreview] = useState(null)
   const [modalDirectorioAbierto, setModalDirectorioAbierto] = useState(false)
+  const [descargaRuteros, setDescargaRuteros] = useState({ activo: false, actual: 0, total: 0 })
+  const [descargaRuterosMsg, setDescargaRuterosMsg] = useState(null)
 
   const fileInputRef = useRef(null)
 
@@ -569,6 +572,36 @@ export default function LogisticaOperacionesWizard() {
     setPreview({ titulo: `Todas las rutas (${rutas.length})`, datos: rutas.map(buildRutaData) })
   }
 
+  async function handleDescargarRuteros() {
+    if (!rutas.length || descargaRuteros.activo) return
+    const items = rutas.map(r => ({
+      ruta: r,
+      filas: buildRutaData(r).filas,
+      colegios,
+      fechaEntrega: r.fechaDespacho || config.fechaEntrega,
+    }))
+    setDescargaRuterosMsg(null)
+    setDescargaRuteros({ activo: true, actual: 0, total: items.length })
+    const resultado = await descargarRuterosPdf(items, {
+      onProgress: (actual, total) => setDescargaRuteros({ activo: true, actual, total }),
+    })
+    setDescargaRuteros({ activo: false, actual: 0, total: 0 })
+    if (resultado.fallidos.length) {
+      setDescargaRuterosMsg({
+        tipo: 'error',
+        texto: `${resultado.ok.length} rutero(s) descargado(s). Fallaron: ${resultado.fallidos.join(', ')}.`,
+      })
+    } else {
+      setDescargaRuterosMsg({ tipo: 'success', texto: `${resultado.ok.length} rutero(s) descargado(s)` })
+    }
+  }
+
+  useEffect(() => {
+    if (!descargaRuterosMsg) return
+    const t = setTimeout(() => setDescargaRuterosMsg(null), 4000)
+    return () => clearTimeout(t)
+  }, [descargaRuterosMsg])
+
   // ============================== RENDER ==============================
   return (
     <div className="app-layout">
@@ -990,6 +1023,9 @@ export default function LogisticaOperacionesWizard() {
                 <button className="btn-secondary" onClick={() => setStep(6)}>← Conductores</button>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="btn-secondary" onClick={reiniciarTodo}>↻ Nueva OC</button>
+                  <button className="btn-secondary" disabled={descargaRuteros.activo} onClick={handleDescargarRuteros}>
+                    {descargaRuteros.activo ? `Generando ${descargaRuteros.actual} de ${descargaRuteros.total}...` : '⬇ Descargar ruteros'}
+                  </button>
                   <button className="btn-primary" onClick={verTodasRutas}>🖨 Ver / Imprimir TODAS las rutas</button>
                 </div>
               </div>
@@ -997,6 +1033,10 @@ export default function LogisticaOperacionesWizard() {
           )}
         </div>
       </main>
+
+      {descargaRuterosMsg && (
+        <div className={`toast toast-${descargaRuterosMsg.tipo}`}>{descargaRuterosMsg.texto}</div>
+      )}
 
       {preview && (
         <LogisticaWizardPrint
