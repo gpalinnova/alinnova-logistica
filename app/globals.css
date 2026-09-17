@@ -3000,6 +3000,26 @@ button.nav-card {
 .wizard-ruta-detail-head h4 { color: #1a472a; font-size: 0.9rem; }
 .wizard-ruta-detail-meta { font-size: 0.76rem; color: #6b7280; }
 
+.subrutas-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  padding: 12px 16px 0;
+}
+
+.subrutas-resumen-item {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.subrutas-resumen-kpis {
+  font-size: 0.76rem;
+  color: #6b7280;
+  margin-top: 3px;
+}
+
 .wizard-localidad-block { padding: 6px 16px 10px; }
 .wizard-col-row {
   display: flex;
