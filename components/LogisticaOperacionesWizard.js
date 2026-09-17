@@ -973,36 +973,71 @@ export default function LogisticaOperacionesWizard() {
                 const ocsSet = new Set(ocs.filter(o => o.selected).map(o => o.numero))
                 const prodSet = new Set(productos.filter(p => p.selected).map(p => p.sap))
                 const puntosLoc = Array.from(new Set(rawRows.filter(r => ocsSet.has(r.oc) && prodSet.has(r.sap) && r.localidad === l.nombre).map(r => r.punto))).sort()
+                const rutaIdsLoc = new Set(rutasLoc.map(r => r.id))
+                const puntosSinAsignar = puntosLoc.filter(p => !rutaIdsLoc.has(colegiosAsignados[p]))
+
+                function renderFilaColegio(punto) {
+                  const c = colegios[punto]
+                  const asignado = colegiosAsignados[punto]
+                  const sugerido = puntosSugeridos.has(punto)
+                  return (
+                    <div key={punto} className="wizard-col-row">
+                      <div><b>{punto}</b> — {c ? c.nombre : '?'}</div>
+                      <div className="wizard-col-select-wrap">
+                        <select
+                          className={sugerido ? 'sugerida-historico' : ''}
+                          value={asignado || ''}
+                          onChange={e => asignarColegio(punto, e.target.value)}
+                          onBlur={() => marcarConfirmado(punto)}
+                        >
+                          <option value="">— Sin asignar —</option>
+                          {rutasLoc.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                        </select>
+                        {sugerido && <span className="wizard-sugerida-hint">⚡ {formatoSugerencia(punto)}</span>}
+                      </div>
+                    </div>
+                  )
+                }
+
                 return (
                   <div key={l.nombre} className="wizard-ruta-detail">
                     <div className="wizard-ruta-detail-head">
                       <h4>{l.nombre}</h4>
-                      <div className="wizard-ruta-detail-meta">{l.numRutas} ruta(s) — {puntosLoc.length} colegios — {fmtN(l.cantidad)} und</div>
                     </div>
-                    <div className="wizard-localidad-block">
-                      {puntosLoc.map(punto => {
-                        const c = colegios[punto]
-                        const asignado = colegiosAsignados[punto]
-                        const sugerido = puntosSugeridos.has(punto)
-                        return (
-                          <div key={punto} className="wizard-col-row">
-                            <div><b>{punto}</b> — {c ? c.nombre : '?'}</div>
-                            <div className="wizard-col-select-wrap">
-                              <select
-                                className={sugerido ? 'sugerida-historico' : ''}
-                                value={asignado || ''}
-                                onChange={e => asignarColegio(punto, e.target.value)}
-                                onBlur={() => marcarConfirmado(punto)}
-                              >
-                                <option value="">— Sin asignar —</option>
-                                {rutasLoc.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                              </select>
-                              {sugerido && <span className="wizard-sugerida-hint">⚡ {formatoSugerencia(punto)}</span>}
+
+                    {rutasLoc.map(r => {
+                      const stats = getStatsRuta(r)
+                      if (!stats.ptos) return null
+                      const puntosRuta = puntosLoc.filter(p => colegiosAsignados[p] === r.id)
+                      return (
+                        <div key={r.id}>
+                          <div className="wizard-ruta-card">
+                            <div className="wizard-ruta-card-head">
+                              <div className="wizard-ruta-nombre-static">{r.nombre}</div>
+                              <div className="wizard-ruta-locs">{l.nombre}</div>
+                            </div>
+                            <div className="wizard-ruta-stats">
+                              <div className="wizard-st"><b>{stats.localidades}</b><span>Locs</span></div>
+                              <div className="wizard-st"><b>{stats.ptos}</b><span>Ptos</span></div>
+                              <div className="wizard-st"><b>{fmtN(stats.cant)}</b><span>Und</span></div>
+                              <div className="wizard-st"><b>{fmtN(stats.canast)}</b><span>Canast</span></div>
                             </div>
                           </div>
-                        )
-                      })}
-                    </div>
+                          <div className="wizard-localidad-block">
+                            {puntosRuta.map(renderFilaColegio)}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {puntosSinAsignar.length > 0 && (
+                      <div>
+                        <div className="section-label">Sin asignar ({puntosSinAsignar.length})</div>
+                        <div className="wizard-localidad-block">
+                          {puntosSinAsignar.map(renderFilaColegio)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
