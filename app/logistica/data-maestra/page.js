@@ -4,6 +4,8 @@ import PageHeader from '../../../components/PageHeader'
 const ITEMS = [
   { href: '/logistica/data-maestra/productos', icon: '🥐', title: 'Productos', desc: 'Productos del módulo Logística', accent: 'accent-blue' },
   { href: '/logistica/data-maestra/directorio', icon: '📚', title: 'Directorio de colegios', desc: 'Cargar directorio maestro desde Excel', accent: 'accent-cyan' },
+  { href: '/logistica/data-maestra/grupos-ruteo', icon: '🗺️', title: 'Grupos de Ruteo', desc: 'Localidades, prefijos y umbrales de partición', accent: 'accent-orange' },
+  { href: '/logistica/data-maestra/subzonas', icon: '📍', title: 'Subzonas', desc: 'Subzonas dentro de cada grupo de ruteo', accent: 'accent-green' },
 ]
 
 function NavCard({ href, icon, title, desc, accent }) {

@@ -121,17 +121,20 @@ function Paginador({ pagina, totalPaginas, total, onChange }) {
 
 export default function DirectorioColegiosPage() {
   const [sitios, setSitios] = useState([])
+  const [subzonas, setSubzonas] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [search, setSearch] = useState('')
+  const [filtroSubzona, setFiltroSubzona] = useState('todas')
   const [pagina, setPagina] = useState(1)
   const [rutaHabitualPorPunto, setRutaHabitualPorPunto] = useState({})
   const [cargandoHabitual, setCargandoHabitual] = useState(false)
   const [modalSitio, setModalSitio] = useState(null)
   const [modalExcelAbierto, setModalExcelAbierto] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
+  const [guardandoSubzonaId, setGuardandoSubzonaId] = useState(null)
 
-  useEffect(() => { fetchSitios() }, [])
+  useEffect(() => { fetchSitios(); fetchSubzonas() }, [])
   useEffect(() => { setPagina(1) }, [search])
   useEffect(() => {
     if (!toastMsg) return
@@ -164,6 +167,14 @@ export default function DirectorioColegiosPage() {
     setCargandoHabitual(false)
   }
 
+  async function fetchSubzonas() {
+    const { data, error } = await supabase.from('logistica_subzonas').select('*').order('nombre_mostrar')
+    if (!error) setSubzonas(data || [])
+  }
+
+  const subzonasPorCodigo = useMemo(() => new Map(subzonas.map(s => [s.codigo, s])), [subzonas])
+  const subzonasActivas = useMemo(() => subzonas.filter(s => s.activo), [subzonas])
+
   const localidadesUnicas = useMemo(
     () => Array.from(new Set(sitios.map(s => s.localidad).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es')),
     [sitios]
@@ -171,10 +182,26 @@ export default function DirectorioColegiosPage() {
 
   const filtrados = useMemo(() => {
     const term = search.trim().toLowerCase()
-    if (!term) return sitios
-    return sitios.filter(s => [s.nombre_institucion, String(s.punto_wms), s.localidad, s.nombre_sitio]
-      .some(v => v != null && String(v).toLowerCase().includes(term)))
-  }, [sitios, search])
+    return sitios.filter(s => {
+      if (filtroSubzona !== 'todas' && s.subzona_codigo !== filtroSubzona) return false
+      if (!term) return true
+      return [s.nombre_institucion, String(s.punto_wms), s.localidad, s.nombre_sitio]
+        .some(v => v != null && String(v).toLowerCase().includes(term))
+    })
+  }, [sitios, search, filtroSubzona])
+
+  async function handleSubzonaChange(sitio, subzonaCodigo) {
+    setGuardandoSubzonaId(sitio.id)
+    const { error } = await supabase.from('logistica_sitios')
+      .update({ subzona_codigo: subzonaCodigo || null })
+      .eq('id', sitio.id)
+    if (error) {
+      setToastMsg('No se pudo actualizar la subzona del sitio.')
+    } else {
+      setSitios(prev => prev.map(s => (s.id === sitio.id ? { ...s, subzona_codigo: subzonaCodigo || null } : s)))
+    }
+    setGuardandoSubzonaId(null)
+  }
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
   const paginaSegura = Math.min(pagina, totalPaginas)
@@ -226,6 +253,10 @@ export default function DirectorioColegiosPage() {
             <button className="btn-primary" onClick={abrirNuevo}>+ Agregar colegio</button>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <button className="btn-secondary" onClick={() => setModalExcelAbierto(true)}>📥 Cargar desde Excel</button>
+              <select value={filtroSubzona} onChange={e => setFiltroSubzona(e.target.value)}>
+                <option value="todas">Todas las subzonas</option>
+                {subzonas.map(s => <option key={s.codigo} value={s.codigo}>{s.nombre_mostrar}</option>)}
+              </select>
               <input
                 type="text"
                 value={search}
@@ -253,6 +284,7 @@ export default function DirectorioColegiosPage() {
                       <th>Sitio de entrega</th>
                       <th>Localidad</th>
                       <th>Dirección</th>
+                      <th>Subzona</th>
                       <th>Ruta habitual</th>
                     </tr>
                   </thead>
@@ -264,6 +296,20 @@ export default function DirectorioColegiosPage() {
                         <td>{s.nombre_sitio || <span className="logistica-muted">—</span>}</td>
                         <td>{s.localidad}</td>
                         <td>{s.direccion || <span className="logistica-muted">—</span>}</td>
+                        <td onClick={e => e.stopPropagation()}>
+                          <select
+                            className="table-input"
+                            value={s.subzona_codigo || ''}
+                            disabled={guardandoSubzonaId === s.id}
+                            onChange={e => handleSubzonaChange(s, e.target.value)}
+                          >
+                            <option value="">— Sin subzona —</option>
+                            {subzonasActivas.map(sz => <option key={sz.codigo} value={sz.codigo}>{sz.nombre_mostrar}</option>)}
+                            {s.subzona_codigo && !subzonasPorCodigo.get(s.subzona_codigo)?.activo && (
+                              <option value={s.subzona_codigo}>{subzonasPorCodigo.get(s.subzona_codigo)?.nombre_mostrar || s.subzona_codigo} (inactiva)</option>
+                            )}
+                          </select>
+                        </td>
                         <td>
                           <RutaHabitualCell
                             sitio={s}

@@ -3237,3 +3237,125 @@ button.nav-card {
 .wp-obs-note { border: 1px solid #000; padding: 7px 8px; margin-top: 6px; font-size: 8pt; font-weight: 600; }
 .wp-obs-sign { width: 140px; text-align: center; font-size: 8pt; }
 .wp-sl { border-bottom: 1px solid #000; height: 34px; margin-bottom: 3px; }
+
+/* ── Editor de umbrales (Grupos de Ruteo — Data Maestra Logística) ── */
+.umbral-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+  color: #374151;
+  flex: 1;
+  min-width: 260px;
+}
+
+.umbral-max-input {
+  width: 80px;
+  text-align: center;
+}
+
+.umbral-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.umbral-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  font-size: 0.78rem;
+}
+
+.umbral-chip-name {
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.umbral-chip-btns {
+  display: flex;
+  gap: 3px;
+}
+
+.umbral-chip-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid #d1d5db;
+  background: #fff;
+  color: #9ca3af;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.umbral-chip-btn:hover { border-color: #9ca3af; color: #4b5563; }
+
+.umbral-chip-btn-r0.active { background: #1a472a; border-color: #1a472a; color: #fff; }
+.umbral-chip-btn-r1.active { background: #ea580c; border-color: #ea580c; color: #fff; }
+.umbral-chip-btn-r2.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.umbral-chip-btn-r3.active { background: #2471a3; border-color: #2471a3; color: #fff; }
+
+.umbral-chip-r0 { border-color: #1a472a; background: #eef7ea; }
+.umbral-chip-r1 { border-color: #ea580c; background: #fff3e0; }
+.umbral-chip-r2 { border-color: #7c3aed; background: #f3e8ff; }
+.umbral-chip-r3 { border-color: #2471a3; background: #e3f2fd; }
+
+.umbral-containers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.umbral-container {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.umbral-container-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.umbral-container-title.umbral-chip-r0 { border-bottom-color: #1a472a; color: #1a472a; background: none; }
+.umbral-container-title.umbral-chip-r1 { border-bottom-color: #ea580c; color: #ea580c; background: none; }
+.umbral-container-title.umbral-chip-r2 { border-bottom-color: #7c3aed; color: #7c3aed; background: none; }
+.umbral-container-title.umbral-chip-r3 { border-bottom-color: #2471a3; color: #2471a3; background: none; }
+
+.umbral-container-empty {
+  font-size: 0.76rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.umbral-container-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.umbral-container-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
