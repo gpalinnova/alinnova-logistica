@@ -3015,6 +3015,7 @@ button.nav-card {
 
 .wizard-col-select-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .wizard-sugerida-hint { font-size: 0.7rem; color: #9ca3af; white-space: nowrap; }
+.wizard-sugerencia-hint-warning { font-size: 0.7rem; color: #E65100; white-space: nowrap; }
 
 .wizard-row-clickable { cursor: pointer; }
 .wizard-row-clickable:hover td { background: #f9fafb; }

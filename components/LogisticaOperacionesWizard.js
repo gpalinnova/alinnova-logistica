@@ -11,6 +11,7 @@ import { parsearExcelWizard } from '../lib/logisticaWizardExcel'
 import { canastillasDe, fmtN } from '../lib/logisticaWizardCalc'
 import { esRefrigerioReforzado } from '../lib/logisticaOcImport'
 import { getRutaHabitual } from '../lib/logisticaAsignacionesQuery'
+import { sugerirParticion } from '../lib/logisticaSugerenciaRutas'
 import { descargarRuterosPdf } from '../lib/logisticaRuteroPdfDownload'
 
 const STEP_LABELS = ['Cargar OC', 'Seleccionar OC', 'Productos', 'Zonas y rutas', 'Distribuir', 'Conductores', 'Generar']
@@ -39,6 +40,8 @@ export default function LogisticaOperacionesWizard() {
   const [maestraError, setMaestraError] = useState('')
   const [productosMaestra, setProductosMaestra] = useState(new Map())
   const [directorio, setDirectorio] = useState(new Map())
+  const [gruposRuteo, setGruposRuteo] = useState(new Map())
+  const [subzonas, setSubzonas] = useState(new Map())
 
   const [fileName, setFileName] = useState('')
   const [fileError, setFileError] = useState('')
@@ -70,16 +73,25 @@ export default function LogisticaOperacionesWizard() {
     let cancelado = false
     ;(async () => {
       setLoadingMaestra(true)
-      const [{ data: prodData, error: prodErr }, { data: sitiosData, error: sitiosErr }] = await Promise.all([
+      const [
+        { data: prodData, error: prodErr },
+        { data: sitiosData, error: sitiosErr },
+        { data: gruposData, error: gruposErr },
+        { data: subzonasData, error: subzonasErr },
+      ] = await Promise.all([
         supabase.from('logistica_productos').select('*').eq('activo', true),
         supabase.from('logistica_sitios').select('*').eq('activo', true),
+        supabase.from('logistica_grupos_ruteo').select('*').eq('activo', true),
+        supabase.from('logistica_subzonas').select('*').eq('activo', true),
       ])
       if (cancelado) return
-      if (prodErr || sitiosErr) {
+      if (prodErr || sitiosErr || gruposErr || subzonasErr) {
         setMaestraError('No se pudo cargar la data maestra de Productos o el Directorio de colegios desde Supabase.')
       } else {
         setProductosMaestra(new Map((prodData || []).map(p => [String(p.codigo_articulo), p])))
         setDirectorio(new Map((sitiosData || []).map(s => [String(s.punto_wms), s])))
+        setGruposRuteo(new Map((gruposData || []).map(g => [g.codigo, g])))
+        setSubzonas(new Map((subzonasData || []).map(s => [s.codigo, s])))
       }
       setLoadingMaestra(false)
     })()
@@ -300,9 +312,24 @@ export default function LogisticaOperacionesWizard() {
       Object.entries(l.porProducto).forEach(([sap, cant]) => {
         canast += canastillasDe(cant, productosPorSap.get(sap)?.embalaje).total
       })
+
+      const esSinLocalidad = l.nombre === 'SIN LOCALIDAD'
+      const sitiosDeLocalidad = Array.from(l.ptos).map(punto => ({
+        punto,
+        subzona_codigo: directorio.get(punto)?.subzona_codigo || null,
+      }))
+      const sugerencia = esSinLocalidad
+        ? { grupoCodigo: null, numRutasSugerido: 1, asignacionPorPunto: {}, destinoFijo: null, carroDedicado: false, maxSitiosTramo: null, sitiosSinSubzona: [] }
+        : sugerirParticion({ sitiosDeLocalidad, gruposRuteo, subzonas })
+
       return {
         nombre: l.nombre, ptos: l.ptos.size, cantidad: l.cantidad, canastillas: canast,
-        selected: l.nombre !== 'SIN LOCALIDAD', numRutas: 1, agrupar: false, porProducto: l.porProducto,
+        selected: !esSinLocalidad, numRutas: sugerencia.numRutasSugerido, agrupar: false, porProducto: l.porProducto,
+        manualNumRutas: false,
+        grupoCodigoSugerido: sugerencia.grupoCodigo,
+        sugerenciaAsignacionPorPunto: sugerencia.asignacionPorPunto,
+        maxSitiosTramo: sugerencia.maxSitiosTramo,
+        sitiosSinSubzona: sugerencia.sitiosSinSubzona,
       }
     }).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
@@ -315,8 +342,10 @@ export default function LogisticaOperacionesWizard() {
     const fechaInit = getFechaOcISO()
     const nuevas = []
     localidadesList.filter(l => l.selected).forEach(l => {
+      const grupo = l.grupoCodigoSugerido ? gruposRuteo.get(l.grupoCodigoSugerido) : null
+      const base = grupo ? grupo.prefijo_ruta : l.nombre
       for (let i = 1; i <= l.numRutas; i++) {
-        const nombreRuta = l.numRutas === 1 ? l.nombre : `${l.nombre} ${i}`
+        const nombreRuta = l.numRutas === 1 ? base : `${base} ${i}`
         const prev = preserve[nombreRuta]
         nuevas.push({
           id: `r-${Math.random().toString(36).slice(2, 9)}`,
@@ -326,6 +355,9 @@ export default function LogisticaOperacionesWizard() {
           conductor: prev?.conductor || '',
           placa: prev?.placa || '',
           fechaDespacho: prev?.fechaDespacho || fechaInit,
+          destinoFijo: grupo?.destino_fijo || null,
+          carroDedicado: Boolean(grupo?.carro_dedicado),
+          esConsolidada: Boolean(grupo?.carro_dedicado && grupo?.destino_fijo),
         })
       }
     })
@@ -340,6 +372,15 @@ export default function LogisticaOperacionesWizard() {
     reiniciarRutas(localidadesList, preserve)
   }
 
+  // Para localidades con numRutas === 1 se asigna todo directo (como antes).
+  // Para localidades con numRutas > 1 que siguen la sugerencia automática
+  // (no editadas manualmente), se usa la partición por subzona calculada en
+  // buildLocalidades(): cada punto va a la ruta cuyo nombre coincide con
+  // sugerenciaAsignacionPorPunto[punto] (los nombres de ruta se generan con
+  // la misma regla en reiniciarRutas y en logisticaSugerenciaRutas, así que
+  // siempre calzan). Si el usuario editó numRutas a mano, esa localidad
+  // queda sin auto-asignar, igual que el comportamiento original — el
+  // usuario la resuelve en el Paso 5 (o la cubre "ruta habitual" ahí).
   function autoAsignarColegios(rutasList, localidadesList) {
     const ocsSet = new Set(ocs.filter(o => o.selected).map(o => o.numero))
     const prodSet = new Set(productos.filter(p => p.selected).map(p => p.sap))
@@ -352,8 +393,17 @@ export default function LogisticaOperacionesWizard() {
     rutasList.forEach(r => {
       r.localidades.forEach(locNombre => {
         const l = localidadesList.find(x => x.nombre === locNombre)
-        if (!l || l.numRutas !== 1) return
-        ;(puntosPorLoc[locNombre] ? Array.from(puntosPorLoc[locNombre]) : []).forEach(punto => { asignados[punto] = r.id })
+        if (!l) return
+        const puntos = puntosPorLoc[locNombre] ? Array.from(puntosPorLoc[locNombre]) : []
+        if (l.numRutas === 1) {
+          puntos.forEach(punto => { asignados[punto] = r.id })
+          return
+        }
+        if (!l.manualNumRutas && l.sugerenciaAsignacionPorPunto) {
+          puntos.forEach(punto => {
+            if (l.sugerenciaAsignacionPorPunto[punto] === r.nombre) asignados[punto] = r.id
+          })
+        }
       })
     })
     setColegiosAsignados(asignados)
@@ -365,7 +415,9 @@ export default function LogisticaOperacionesWizard() {
     recalcRutasFromLocalidades(updated)
   }
   function toggleZona(nombre, checked) { updateLocalidad(nombre, { selected: checked }) }
-  function setNumRutas(nombre, val) { updateLocalidad(nombre, { numRutas: Math.max(1, parseInt(val, 10) || 1) }) }
+  function setNumRutas(nombre, val) {
+    updateLocalidad(nombre, { numRutas: Math.max(1, parseInt(val, 10) || 1), manualNumRutas: true })
+  }
   function toggleAgrupar(nombre, checked) { setLocalidades(prev => prev.map(l => l.nombre === nombre ? { ...l, agrupar: checked } : l)) }
   function toggleAllZonas(checked) {
     const updated = localidades.map(l => l.nombre !== 'SIN LOCALIDAD' ? { ...l, selected: checked } : l)
@@ -404,6 +456,12 @@ export default function LogisticaOperacionesWizard() {
     setRutas(nuevasRutas)
     autoAsignarColegios(nuevasRutas, localidadesActualizadas)
   }
+
+  const sitiosSinSubzonaTotal = useMemo(() => {
+    const puntos = new Set()
+    localidades.forEach(l => { if (l.selected) (l.sitiosSinSubzona || []).forEach(p => puntos.add(p)) })
+    return Array.from(puntos)
+  }, [localidades])
 
   function confirmZonas() {
     if (!rutas.length) { window.alert('Debes armar al menos una ruta.'); return }
@@ -806,6 +864,22 @@ export default function LogisticaOperacionesWizard() {
                 <div className="logistica-warning-box">⚠ Hay {localidades.find(l => l.nombre === 'SIN LOCALIDAD')?.ptos || 0} punto(s) sin localidad válida. No se incluyen a menos que los marques manualmente.</div>
               )}
 
+              {sitiosSinSubzonaTotal.length > 0 && (
+                <div className="logistica-warning-box">
+                  ⚠ {sitiosSinSubzonaTotal.length} sitio(s) de la OC no tienen subzona asignada y no aparecen en la sugerencia automática. Deberás asignarlos manualmente en el paso siguiente.
+                  <details className="bs-mapeo-details" style={{ marginTop: 8 }}>
+                    <summary className="bs-mapeo-summary">Ver sitios</summary>
+                    <div className="bs-mapeo-body">
+                      <div className="bs-mapeo-list">
+                        {sitiosSinSubzonaTotal.map(p => (
+                          <span key={p} className="bs-mapeo-chip">{p} — {colegios[p]?.nombre || '?'}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              )}
+
               <div className="data-table-wrap">
                 <div className="table-toolbar-row">
                   <span>Marca las localidades que van a despacho hoy. Ajusta cuántos carros necesita cada una.</span>
@@ -838,6 +912,11 @@ export default function LogisticaOperacionesWizard() {
                           <td><b>{fmtN(l.canastillas)}</b></td>
                           <td style={{ textAlign: 'center' }}>
                             <input type="number" min="1" max="5" value={l.numRutas} style={{ width: 60, textAlign: 'center' }} onChange={e => setNumRutas(l.nombre, e.target.value)} />
+                            {l.manualNumRutas ? (
+                              <div className="wizard-sugerencia-hint-warning">Editado manualmente</div>
+                            ) : l.grupoCodigoSugerido ? (
+                              <div className="wizard-sugerida-hint">Sugerido por subzonas · umbral ≤{l.maxSitiosTramo} sitios</div>
+                            ) : null}
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <input type="checkbox" checked={l.agrupar} onChange={e => toggleAgrupar(l.nombre, e.target.checked)} />

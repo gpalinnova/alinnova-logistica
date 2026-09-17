@@ -63,6 +63,7 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
   const { productos, filasRender, totales, totalUnidades, totalCanastillas } = construirRutero(ruta, filas, colegios)
   const numProd = productos.length
   const lineaLabel = lineaLabelDeFilas(filas)
+  const consolidada = Boolean(ruta.esConsolidada)
 
   if (!filas.length) {
     return (
@@ -72,6 +73,8 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
       </div>
     )
   }
+
+  const colegiosCount = new Set(filas.map(f => f.punto)).size
 
   return (
     <div className="wizard-print-page landscape">
@@ -86,7 +89,7 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
       </div>
 
       <div className="wp-rut-info">
-        <div className="wp-ri"><b>RUTA:</b> <span className="wp-val">{ruta.nombre}</span></div>
+        <div className="wp-ri"><b>RUTA:</b> <span className="wp-val">{consolidada ? `${ruta.nombre} → ${ruta.destinoFijo}` : ruta.nombre}</span></div>
         <div className="wp-ri"><b>CONDUCTOR:</b> <span className="wp-val">{ruta.conductor || '________________'}</span></div>
         <div className="wp-ri"><b>PLACA:</b> <span className="wp-val">{ruta.placa || '__________'}</span></div>
       </div>
@@ -116,26 +119,40 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
           </tr>
         </thead>
         <tbody>
-          {filasRender.map(f => (
-            <tr key={f.col.punto}>
-              <td className="wp-mono">{f.col.punto}</td>
-              <td className="wp-tdl">{f.col.nombre}</td>
-              <td className="wp-tdl" style={{ fontSize: '7pt' }}>{f.col.direccion || '—'}</td>
-              {f.rowData.map((rd, i) => <td key={`c${i}`} className="wp-tdr">{rd.cant || ''}</td>)}
-              {f.rowData.map((rd, i) => [
-                <td key={`ca${i}`}>{rd.canast || 0}</td>,
-                <td key={`s${i}`}>{rd.sueltas || 0}</td>,
+          {consolidada ? (
+            <tr>
+              <td className="wp-mono">—</td>
+              <td className="wp-tdl" colSpan={2}><b>{ruta.destinoFijo}</b> — {colegiosCount} colegio(s) consolidados</td>
+              {totales.map((t, i) => <td key={`c${i}`} className="wp-tdr">{fmtN(t.cant)}</td>)}
+              {totales.map((t, i) => [
+                <td key={`ca${i}`}>{t.canast}</td>,
+                <td key={`s${i}`}>{t.sueltas}</td>,
               ])}
             </tr>
-          ))}
-          <tr className="wp-total-row">
-            <td colSpan={3} style={{ textAlign: 'right' }}>TOTAL</td>
-            {totales.map((t, i) => <td key={`tc${i}`}>{fmtN(t.cant)}</td>)}
-            {totales.map((t, i) => [
-              <td key={`tca${i}`}>{t.canast}</td>,
-              <td key={`ts${i}`}>{t.sueltas}</td>,
-            ])}
-          </tr>
+          ) : (
+            <>
+              {filasRender.map(f => (
+                <tr key={f.col.punto}>
+                  <td className="wp-mono">{f.col.punto}</td>
+                  <td className="wp-tdl">{f.col.nombre}</td>
+                  <td className="wp-tdl" style={{ fontSize: '7pt' }}>{f.col.direccion || '—'}</td>
+                  {f.rowData.map((rd, i) => <td key={`c${i}`} className="wp-tdr">{rd.cant || ''}</td>)}
+                  {f.rowData.map((rd, i) => [
+                    <td key={`ca${i}`}>{rd.canast || 0}</td>,
+                    <td key={`s${i}`}>{rd.sueltas || 0}</td>,
+                  ])}
+                </tr>
+              ))}
+              <tr className="wp-total-row">
+                <td colSpan={3} style={{ textAlign: 'right' }}>TOTAL</td>
+                {totales.map((t, i) => <td key={`tc${i}`}>{fmtN(t.cant)}</td>)}
+                {totales.map((t, i) => [
+                  <td key={`tca${i}`}>{t.canast}</td>,
+                  <td key={`ts${i}`}>{t.sueltas}</td>,
+                ])}
+              </tr>
+            </>
+          )}
         </tbody>
       </table>
 
