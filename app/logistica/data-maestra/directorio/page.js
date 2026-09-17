@@ -125,6 +125,7 @@ export default function DirectorioColegiosPage() {
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [search, setSearch] = useState('')
+  const [filtroLocalidad, setFiltroLocalidad] = useState('todas')
   const [filtroSubzona, setFiltroSubzona] = useState('todas')
   const [pagina, setPagina] = useState(1)
   const [rutaHabitualPorPunto, setRutaHabitualPorPunto] = useState({})
@@ -180,15 +181,36 @@ export default function DirectorioColegiosPage() {
     [sitios]
   )
 
+  const subzonasPorLocalidad = useMemo(() => {
+    const mapa = new Map()
+    for (const s of sitios) {
+      if (!s.localidad || !s.subzona_codigo) continue
+      if (!mapa.has(s.localidad)) mapa.set(s.localidad, new Set())
+      mapa.get(s.localidad).add(s.subzona_codigo)
+    }
+    return mapa
+  }, [sitios])
+
+  function handleFiltroLocalidadChange(valor) {
+    setFiltroLocalidad(valor)
+    if (filtroSubzona !== 'todas') {
+      const subzonasValidas = valor === 'todas' ? null : subzonasPorLocalidad.get(valor)
+      if (subzonasValidas && !subzonasValidas.has(filtroSubzona)) {
+        setFiltroSubzona('todas')
+      }
+    }
+  }
+
   const filtrados = useMemo(() => {
     const term = search.trim().toLowerCase()
     return sitios.filter(s => {
+      if (filtroLocalidad !== 'todas' && s.localidad !== filtroLocalidad) return false
       if (filtroSubzona !== 'todas' && s.subzona_codigo !== filtroSubzona) return false
       if (!term) return true
       return [s.nombre_institucion, String(s.punto_wms), s.localidad, s.nombre_sitio]
         .some(v => v != null && String(v).toLowerCase().includes(term))
     })
-  }, [sitios, search, filtroSubzona])
+  }, [sitios, search, filtroLocalidad, filtroSubzona])
 
   async function handleSubzonaChange(sitio, subzonaCodigo) {
     setGuardandoSubzonaId(sitio.id)
@@ -253,6 +275,10 @@ export default function DirectorioColegiosPage() {
             <button className="btn-primary" onClick={abrirNuevo}>+ Agregar colegio</button>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <button className="btn-secondary" onClick={() => setModalExcelAbierto(true)}>📥 Cargar desde Excel</button>
+              <select value={filtroLocalidad} onChange={e => handleFiltroLocalidadChange(e.target.value)}>
+                <option value="todas">Todas las localidades</option>
+                {localidadesUnicas.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+              </select>
               <select value={filtroSubzona} onChange={e => setFiltroSubzona(e.target.value)}>
                 <option value="todas">Todas las subzonas</option>
                 {subzonas.map(s => <option key={s.codigo} value={s.codigo}>{s.nombre_mostrar}</option>)}

@@ -3259,6 +3259,8 @@ button.nav-card {
 .wp-obs-sign { width: 140px; text-align: center; font-size: 8pt; }
 .wp-sl { border-bottom: 1px solid #000; height: 34px; margin-bottom: 3px; }
 
+.wp-resumen-title { font-size: 16pt; font-weight: 900; text-align: center; letter-spacing: 1px; margin-bottom: 16px; }
+
 /* ── Editor de umbrales (Grupos de Ruteo — Data Maestra Logística) ── */
 .umbral-header-row {
   display: flex;

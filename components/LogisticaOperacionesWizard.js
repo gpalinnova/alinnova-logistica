@@ -66,6 +66,7 @@ export default function LogisticaOperacionesWizard() {
   const [modalDirectorioAbierto, setModalDirectorioAbierto] = useState(false)
   const [descargaRuteros, setDescargaRuteros] = useState({ activo: false, actual: 0, total: 0 })
   const [descargaRuterosMsg, setDescargaRuterosMsg] = useState(null)
+  const [despachoGuardadoMsg, setDespachoGuardadoMsg] = useState(null)
 
   const fileInputRef = useRef(null)
 
@@ -326,6 +327,7 @@ export default function LogisticaOperacionesWizard() {
         nombre: l.nombre, ptos: l.ptos.size, cantidad: l.cantidad, canastillas: canast,
         selected: !esSinLocalidad, numRutas: sugerencia.numRutasSugerido, agrupar: false, porProducto: l.porProducto,
         manualNumRutas: false,
+        numRutasSugerido: sugerencia.numRutasSugerido,
         grupoCodigoSugerido: sugerencia.grupoCodigo,
         sugerenciaAsignacionPorPunto: sugerencia.asignacionPorPunto,
         maxSitiosTramo: sugerencia.maxSitiosTramo,
@@ -338,28 +340,34 @@ export default function LogisticaOperacionesWizard() {
   }
 
   // ============================== PASO 4 — ZONAS Y RUTAS ==============================
+  function crearRutasIndividualesParaLocalidad(l, fechaInit, preserve = {}) {
+    const grupo = l.grupoCodigoSugerido ? gruposRuteo.get(l.grupoCodigoSugerido) : null
+    const base = grupo ? grupo.prefijo_ruta : l.nombre
+    const out = []
+    for (let i = 1; i <= l.numRutas; i++) {
+      const nombreRuta = l.numRutas === 1 ? base : `${base} ${i}`
+      const prev = preserve[nombreRuta]
+      out.push({
+        id: `r-${Math.random().toString(36).slice(2, 9)}`,
+        nombre: nombreRuta,
+        localidades: [l.nombre],
+        subruta: l.numRutas > 1 ? i : null,
+        conductor: prev?.conductor || '',
+        placa: prev?.placa || '',
+        fechaDespacho: prev?.fechaDespacho || fechaInit,
+        destinoFijo: grupo?.destino_fijo || null,
+        carroDedicado: Boolean(grupo?.carro_dedicado),
+        esConsolidada: Boolean(grupo?.carro_dedicado && grupo?.destino_fijo),
+      })
+    }
+    return out
+  }
+
   function reiniciarRutas(localidadesList, preserve) {
     const fechaInit = getFechaOcISO()
     const nuevas = []
     localidadesList.filter(l => l.selected).forEach(l => {
-      const grupo = l.grupoCodigoSugerido ? gruposRuteo.get(l.grupoCodigoSugerido) : null
-      const base = grupo ? grupo.prefijo_ruta : l.nombre
-      for (let i = 1; i <= l.numRutas; i++) {
-        const nombreRuta = l.numRutas === 1 ? base : `${base} ${i}`
-        const prev = preserve[nombreRuta]
-        nuevas.push({
-          id: `r-${Math.random().toString(36).slice(2, 9)}`,
-          nombre: nombreRuta,
-          localidades: [l.nombre],
-          subruta: l.numRutas > 1 ? i : null,
-          conductor: prev?.conductor || '',
-          placa: prev?.placa || '',
-          fechaDespacho: prev?.fechaDespacho || fechaInit,
-          destinoFijo: grupo?.destino_fijo || null,
-          carroDedicado: Boolean(grupo?.carro_dedicado),
-          esConsolidada: Boolean(grupo?.carro_dedicado && grupo?.destino_fijo),
-        })
-      }
+      nuevas.push(...crearRutasIndividualesParaLocalidad(l, fechaInit, preserve))
     })
     setRutas(nuevas)
     autoAsignarColegios(nuevas, localidadesList)
@@ -447,6 +455,26 @@ export default function LogisticaOperacionesWizard() {
     autoAsignarColegios(nuevasRutas, localidadesActualizadas)
   }
 
+  function deshacerAgrupacion(routeId) {
+    const r = rutas.find(x => x.id === routeId)
+    if (!r || r.localidades.length < 2) return
+    const nombresGrupo = r.localidades
+    const fechaInit = getFechaOcISO()
+    const localidadesActualizadas = localidades.map(l =>
+      nombresGrupo.includes(l.nombre)
+        ? { ...l, agrupar: false, numRutas: l.numRutasSugerido || 1, manualNumRutas: false }
+        : l
+    )
+    const nuevasRutasIndividuales = nombresGrupo.flatMap(nombre => {
+      const l = localidadesActualizadas.find(x => x.nombre === nombre)
+      return l ? crearRutasIndividualesParaLocalidad(l, fechaInit) : []
+    })
+    const nuevasRutas = [...rutas.filter(x => x.id !== routeId), ...nuevasRutasIndividuales]
+    setLocalidades(localidadesActualizadas)
+    setRutas(nuevasRutas)
+    autoAsignarColegios(nuevasRutas, localidadesActualizadas)
+  }
+
   function borrarRuta(id) {
     const r = rutas.find(x => x.id === id)
     if (!r) return
@@ -462,6 +490,12 @@ export default function LogisticaOperacionesWizard() {
     localidades.forEach(l => { if (l.selected) (l.sitiosSinSubzona || []).forEach(p => puntos.add(p)) })
     return Array.from(puntos)
   }, [localidades])
+
+  const rutasAgrupadas = useMemo(() => rutas.filter(r => r.localidades.length > 1), [rutas])
+  const nombresLocalidadesAgrupadas = useMemo(
+    () => new Set(rutasAgrupadas.flatMap(r => r.localidades)),
+    [rutasAgrupadas]
+  )
 
   function confirmZonas() {
     if (!rutas.length) { window.alert('Debes armar al menos una ruta.'); return }
@@ -660,6 +694,60 @@ export default function LogisticaOperacionesWizard() {
     return () => clearTimeout(t)
   }, [descargaRuterosMsg])
 
+  useEffect(() => {
+    if (!despachoGuardadoMsg) return
+    const t = setTimeout(() => setDespachoGuardadoMsg(null), 4000)
+    return () => clearTimeout(t)
+  }, [despachoGuardadoMsg])
+
+  // Línea de negocio de la ruta a efectos del historial: se agrega
+  // am_pm bajo panaderia porque el historial solo distingue panaderia/gastronomia.
+  function lineaDespachoDeFilas(filas) {
+    return filas.some(f => f.producto?.linea === 'gastronomia') ? 'gastronomia' : 'panaderia'
+  }
+
+  function fechaConsumoDominante(filas) {
+    const conteo = new Map()
+    filas.forEach(f => { if (f.fecha_consumo) conteo.set(f.fecha_consumo, (conteo.get(f.fecha_consumo) || 0) + 1) })
+    let mejor = null, max = 0
+    for (const [fecha, c] of conteo) { if (c > max) { max = c; mejor = fecha } }
+    return mejor
+  }
+
+  async function guardarDespachos(datos) {
+    if (!datos || !datos.length) return
+    const filasParaGuardar = datos.map(({ ruta, filas }) => {
+      const puntos = new Set(filas.map(f => f.punto))
+      const totalUnidades = filas.reduce((s, f) => s + f.cantidad, 0)
+      const porProd = {}
+      filas.forEach(f => { porProd[f.sap] = (porProd[f.sap] || 0) + f.cantidad })
+      let totalCanastillas = 0
+      Object.entries(porProd).forEach(([sap, c]) => { totalCanastillas += canastillasDe(c, productosPorSap.get(sap)?.embalaje).total })
+      const ocsOrigen = Array.from(new Set(filas.map(f => f.oc).filter(Boolean)))
+      return {
+        fecha_despacho: ruta.fechaDespacho || config.fechaEntrega,
+        fecha_consumo: fechaConsumoDominante(filas),
+        linea: lineaDespachoDeFilas(filas),
+        nombre_ruta: ruta.nombre,
+        conductor_nombre: ruta.conductor || null,
+        placa: ruta.placa || null,
+        total_sitios: puntos.size,
+        total_unidades: totalUnidades,
+        total_canastillas: totalCanastillas,
+        ocs_origen: ocsOrigen,
+        productos_json: porProd,
+        updated_at: new Date().toISOString(),
+      }
+    }).filter(f => f.fecha_despacho && f.nombre_ruta)
+    if (!filasParaGuardar.length) return
+    const { error } = await supabase.from('logistica_despachos')
+      .upsert(filasParaGuardar, { onConflict: 'fecha_despacho,nombre_ruta,linea' })
+    if (error) {
+      console.error('No se pudo guardar el historial de despachos:', error)
+      setDespachoGuardadoMsg({ tipo: 'error', texto: '⚠ No se pudo guardar el historial de ruteros. La impresión continúa igual.' })
+    }
+  }
+
   // ============================== RENDER ==============================
   return (
     <div className="app-layout">
@@ -671,6 +759,10 @@ export default function LogisticaOperacionesWizard() {
           subtitle="Wizard de OC → rutero → remisiones"
         />
         <div className="page-content">
+          <div className="page-toolbar spread" style={{ marginBottom: 12 }}>
+            <span className="logistica-muted">Importar OC, armar rutas y generar ruteros/remisiones</span>
+            <Link href="/logistica/operaciones/historial-ruteros" className="btn-secondary">📋 Historial de ruteros</Link>
+          </div>
           <div className="wizard-steps">
             {STEP_LABELS.map((label, i) => {
               const n = i + 1
@@ -901,7 +993,7 @@ export default function LogisticaOperacionesWizard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {localidades.map(l => {
+                    {localidades.filter(l => !nombresLocalidadesAgrupadas.has(l.nombre)).map(l => {
                       const invalida = l.nombre === 'SIN LOCALIDAD'
                       return (
                         <tr key={l.nombre} className={invalida ? 'logistica-row-highlight' : ''}>
@@ -927,6 +1019,29 @@ export default function LogisticaOperacionesWizard() {
                   </tbody>
                 </table>
               </div>
+
+              {rutasAgrupadas.length > 0 && (
+                <div style={{ marginTop: 20 }}>
+                  <h3>Localidades agrupadas</h3>
+                  {rutasAgrupadas.map(r => {
+                    const locsGrupo = localidades.filter(l => r.localidades.includes(l.nombre))
+                    const totalPtos = locsGrupo.reduce((s, l) => s + l.ptos, 0)
+                    const totalUnidades = locsGrupo.reduce((s, l) => s + l.cantidad, 0)
+                    return (
+                      <div key={r.id} className="wizard-ruta-summary">
+                        <div className="wizard-ruta-summary-head">
+                          <h4>{r.nombre}</h4>
+                          <button className="btn-secondary" onClick={() => deshacerAgrupacion(r.id)}>🗑 Deshacer agrupación</button>
+                        </div>
+                        <div className="wizard-ruta-summary-info">
+                          <span><b>{fmtN(totalPtos)}</b> sitios</span>
+                          <span><b>{fmtN(totalUnidades)}</b> unidades</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
               <h3 style={{ marginTop: 20 }}>Rutas armadas</h3>
               {!rutas.length && <div className="empty-state"><p>Aún no hay rutas armadas. Marca localidades y ajusta cuántos carros necesita cada una.</p></div>}
@@ -1132,6 +1247,10 @@ export default function LogisticaOperacionesWizard() {
         <div className={`toast toast-${descargaRuterosMsg.tipo}`}>{descargaRuterosMsg.texto}</div>
       )}
 
+      {despachoGuardadoMsg && (
+        <div className={`toast toast-${despachoGuardadoMsg.tipo}`}>{despachoGuardadoMsg.texto}</div>
+      )}
+
       {preview && (
         <LogisticaWizardPrint
           titulo={preview.titulo}
@@ -1139,6 +1258,7 @@ export default function LogisticaOperacionesWizard() {
           colegios={colegios}
           config={config}
           rutasIndex={rutasIndex}
+          onBeforePrint={() => guardarDespachos(preview.datos)}
           onClose={() => setPreview(null)}
         />
       )}

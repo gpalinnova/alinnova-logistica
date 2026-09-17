@@ -59,6 +59,63 @@ function shortName(producto) {
   return producto.nombre || producto.nombreCompleto || producto.sap
 }
 
+// Agrega cantidades por producto a nivel de todo el despacho (todas las
+// rutas incluidas en `datos`). Si el mismo producto viene con distinta
+// fecha_entrega o fecha_consumo (varias OCs en un mismo despacho), se
+// mantiene como fila aparte en vez de consolidarse en una sola.
+function buildResumenProductos(datos) {
+  const acc = new Map()
+  datos.forEach(({ filas }) => {
+    filas.forEach(f => {
+      const key = `${f.sap}|${f.fecha_entrega || ''}|${f.fecha_consumo || ''}`
+      if (!acc.has(key)) {
+        acc.set(key, {
+          producto: f.producto,
+          cantidad: 0,
+          fecha_entrega: f.fecha_entrega,
+          fecha_consumo: f.fecha_consumo,
+        })
+      }
+      acc.get(key).cantidad += f.cantidad
+    })
+  })
+  return Array.from(acc.values()).sort((a, b) => {
+    const na = a.producto?.nombreCompleto || a.producto?.nombre || a.producto?.sap || ''
+    const nb = b.producto?.nombreCompleto || b.producto?.nombre || b.producto?.sap || ''
+    return na.localeCompare(nb, 'es')
+  })
+}
+
+function ResumenProductosPage({ datos }) {
+  const filas = buildResumenProductos(datos)
+  if (!filas.length) return null
+  return (
+    <div className="wizard-print-page">
+      <div className="wp-resumen-title">RESUMEN DE PRODUCTOS DESPACHADOS</div>
+      <table className="wp-rem-tabla">
+        <thead>
+          <tr>
+            <th style={{ textAlign: 'left' }}>PRODUCTO</th>
+            <th style={{ width: 110 }}>CANTIDAD TOTAL</th>
+            <th style={{ width: 120 }}>FECHA DE ENTREGA</th>
+            <th style={{ width: 120 }}>FECHA DE CONSUMO</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((f, i) => (
+            <tr key={i}>
+              <td className="wp-tdl">{f.producto?.nombreCompleto || f.producto?.nombre || f.producto?.sap}</td>
+              <td className="wp-c-cant">{fmtN(f.cantidad)}</td>
+              <td>{f.fecha_entrega ? fmtDateCorta(f.fecha_entrega) : '—'}</td>
+              <td>{f.fecha_consumo ? fmtDateCorta(f.fecha_consumo) : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
   const { productos, filasRender, totales, totalUnidades, totalCanastillas } = construirRutero(ruta, filas, colegios)
   const numProd = productos.length
@@ -316,8 +373,9 @@ function RemisionPage({ ruta, punto, filasCol, nro, fechaEmision, fechaEntrega, 
 
 // datos: [{ ruta, filas }] — filas ya incluyen .producto resuelto
 // rutasIndex: Map ruta.id -> índice en la lista completa de rutas (numeración de remisión)
-export default function LogisticaWizardPrint({ titulo, datos, colegios, config, rutasIndex, onClose }) {
+export default function LogisticaWizardPrint({ titulo, datos, colegios, config, rutasIndex, onBeforePrint, onClose }) {
   const [mounted, setMounted] = useState(false)
+  const [imprimiendo, setImprimiendo] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
@@ -329,13 +387,22 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
 
   const nroInicio = parseInt(config.nroInicio, 10) || 1
 
+  async function handleImprimir() {
+    if (onBeforePrint) {
+      setImprimiendo(true)
+      try { await onBeforePrint() } catch (err) { console.error('onBeforePrint falló:', err) }
+      setImprimiendo(false)
+    }
+    window.print()
+  }
+
   return createPortal(
     <div className="wizard-print-root">
       <div className="wp-toolbar no-print">
         <div className="wp-toolbar-title">{titulo}</div>
         <div className="wp-toolbar-actions">
           <button className="btn-secondary" onClick={onClose}>← Volver</button>
-          <button className="btn-primary" onClick={() => window.print()}>🖨 Imprimir</button>
+          <button className="btn-primary" disabled={imprimiendo} onClick={handleImprimir}>🖨 {imprimiendo ? 'Guardando...' : 'Imprimir'}</button>
         </div>
       </div>
       <div className="wp-preview-mount">
@@ -366,6 +433,7 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
             </div>
           )
         })}
+        <ResumenProductosPage datos={datos} />
       </div>
     </div>,
     document.body
