@@ -9,6 +9,7 @@ import { fmtN } from '../../../../lib/logisticaWizardCalc'
 import { fmtDateCorta } from '../../../../lib/logisticaWizardExcel'
 
 const LINEA_LABEL = { panaderia: 'Panadería', gastronomia: 'Gastronomía' }
+const TIPO_EMPAQUE_LABEL = { parafinado: 'Parafinado', parafinado_bolsa: 'Parafinado + bolsa' }
 
 function hoyISO() {
   return new Date().toISOString().split('T')[0]
@@ -27,13 +28,14 @@ function csvEscape(value) {
 }
 
 function descargarCsv(filas) {
-  const encabezados = ['Fecha despacho', 'Fecha consumo', 'Línea', 'Ruta', 'Conductor', 'Placa', 'Total sitios', 'Total unidades', 'Total canastillas']
+  const encabezados = ['Fecha despacho', 'Fecha consumo', 'Línea', 'Empaque', 'Ruta', 'Conductor', 'Placa', 'Total sitios', 'Total unidades', 'Total canastillas']
   const lineas = [encabezados.join(',')]
   filas.forEach(f => {
     lineas.push([
       f.fecha_despacho || '',
       f.fecha_consumo || '',
       LINEA_LABEL[f.linea] || f.linea,
+      f.tipo_empaque ? (TIPO_EMPAQUE_LABEL[f.tipo_empaque] || f.tipo_empaque) : '',
       f.nombre_ruta,
       f.conductor_nombre || '',
       f.placa || '',
@@ -210,6 +212,7 @@ export default function HistorialRuterosPage() {
                     <th>Fecha despacho</th>
                     <th>Fecha consumo</th>
                     <th>Línea</th>
+                    <th>Empaque</th>
                     <th>Ruta</th>
                     <th>Conductor</th>
                     <th>Placa</th>
@@ -225,6 +228,7 @@ export default function HistorialRuterosPage() {
                       <td>{fmtDateCorta(d.fecha_despacho)}</td>
                       <td>{d.fecha_consumo ? fmtDateCorta(d.fecha_consumo) : <span className="logistica-muted">—</span>}</td>
                       <td>{LINEA_LABEL[d.linea] || d.linea}</td>
+                      <td>{d.tipo_empaque ? (TIPO_EMPAQUE_LABEL[d.tipo_empaque] || d.tipo_empaque) : <span className="logistica-muted">—</span>}</td>
                       <td>{d.nombre_ruta}</td>
                       <td>{d.conductor_nombre || <span className="logistica-muted">—</span>}</td>
                       <td className="logistica-mono">{d.placa || <span className="logistica-muted">—</span>}</td>

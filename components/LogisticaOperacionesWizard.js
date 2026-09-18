@@ -13,6 +13,7 @@ import { esRefrigerioReforzado } from '../lib/logisticaOcImport'
 import { getRutaHabitual } from '../lib/logisticaAsignacionesQuery'
 import { sugerirParticion } from '../lib/logisticaSugerenciaRutas'
 import { descargarRuterosPdf } from '../lib/logisticaRuteroPdfDownload'
+import { filasNoAmPm, separarAmPmPorHorno } from '../lib/logisticaEmpaqueAmpm'
 
 const STEP_LABELS = ['Cargar OC', 'Seleccionar OC', 'Productos', 'Zonas y rutas', 'Distribuir', 'Conductores', 'Generar']
 
@@ -199,6 +200,7 @@ export default function LogisticaOperacionesWizard() {
           direccion: dir ? dir.direccion : null,
           sedeEducativa: dir ? dir.sede_educativa : null,
           enDirectorio: Boolean(dir),
+          tiene_horno: dir ? Boolean(dir.tiene_horno) : false,
         }
       }
     })
@@ -274,6 +276,7 @@ export default function LogisticaOperacionesWizard() {
           direccion: sitio.direccion,
           sedeEducativa: sitio.sede_educativa,
           enDirectorio: true,
+          tiene_horno: Boolean(sitio.tiene_horno),
         }
       })
       return next
@@ -714,34 +717,54 @@ export default function LogisticaOperacionesWizard() {
     return mejor
   }
 
+  // Fila de historial para un subgrupo de filas de una ruta (todo, o solo su
+  // porción AM-PM con/sin horno). tipoEmpaque queda NULL cuando el subgrupo
+  // no es AM-PM (comportamiento actual, sin cambios).
+  function construirFilaDespacho(ruta, filasGrupo, tipoEmpaque) {
+    const puntos = new Set(filasGrupo.map(f => f.punto))
+    const totalUnidades = filasGrupo.reduce((s, f) => s + f.cantidad, 0)
+    const porProd = {}
+    filasGrupo.forEach(f => { porProd[f.sap] = (porProd[f.sap] || 0) + f.cantidad })
+    let totalCanastillas = 0
+    Object.entries(porProd).forEach(([sap, c]) => { totalCanastillas += canastillasDe(c, productosPorSap.get(sap)?.embalaje).total })
+    const ocsOrigen = Array.from(new Set(filasGrupo.map(f => f.oc).filter(Boolean)))
+    return {
+      fecha_despacho: ruta.fechaDespacho || config.fechaEntrega,
+      fecha_consumo: fechaConsumoDominante(filasGrupo),
+      linea: lineaDespachoDeFilas(filasGrupo),
+      nombre_ruta: ruta.nombre,
+      conductor_nombre: ruta.conductor || null,
+      placa: ruta.placa || null,
+      total_sitios: puntos.size,
+      total_unidades: totalUnidades,
+      total_canastillas: totalCanastillas,
+      ocs_origen: ocsOrigen,
+      productos_json: porProd,
+      tipo_empaque: tipoEmpaque,
+      updated_at: new Date().toISOString(),
+    }
+  }
+
   async function guardarDespachos(datos) {
     if (!datos || !datos.length) return
-    const filasParaGuardar = datos.map(({ ruta, filas }) => {
-      const puntos = new Set(filas.map(f => f.punto))
-      const totalUnidades = filas.reduce((s, f) => s + f.cantidad, 0)
-      const porProd = {}
-      filas.forEach(f => { porProd[f.sap] = (porProd[f.sap] || 0) + f.cantidad })
-      let totalCanastillas = 0
-      Object.entries(porProd).forEach(([sap, c]) => { totalCanastillas += canastillasDe(c, productosPorSap.get(sap)?.embalaje).total })
-      const ocsOrigen = Array.from(new Set(filas.map(f => f.oc).filter(Boolean)))
-      return {
-        fecha_despacho: ruta.fechaDespacho || config.fechaEntrega,
-        fecha_consumo: fechaConsumoDominante(filas),
-        linea: lineaDespachoDeFilas(filas),
-        nombre_ruta: ruta.nombre,
-        conductor_nombre: ruta.conductor || null,
-        placa: ruta.placa || null,
-        total_sitios: puntos.size,
-        total_unidades: totalUnidades,
-        total_canastillas: totalCanastillas,
-        ocs_origen: ocsOrigen,
-        productos_json: porProd,
-        updated_at: new Date().toISOString(),
+    const filasParaGuardar = []
+    datos.forEach(({ ruta, filas }) => {
+      const filasSinAmPm = filasNoAmPm(filas)
+      const { conHorno, sinHorno } = separarAmPmPorHorno(filas, colegios)
+      const hayAmPm = conHorno.length > 0 || sinHorno.length > 0
+
+      if (!hayAmPm) {
+        if (filas.length) filasParaGuardar.push(construirFilaDespacho(ruta, filas, null))
+        return
       }
-    }).filter(f => f.fecha_despacho && f.nombre_ruta)
-    if (!filasParaGuardar.length) return
+      if (filasSinAmPm.length) filasParaGuardar.push(construirFilaDespacho(ruta, filasSinAmPm, null))
+      if (sinHorno.some(f => f.cantidad > 0)) filasParaGuardar.push(construirFilaDespacho(ruta, sinHorno, 'parafinado_bolsa'))
+      if (conHorno.some(f => f.cantidad > 0)) filasParaGuardar.push(construirFilaDespacho(ruta, conHorno, 'parafinado'))
+    })
+    const filasFiltradas = filasParaGuardar.filter(f => f.fecha_despacho && f.nombre_ruta)
+    if (!filasFiltradas.length) return
     const { error } = await supabase.from('logistica_despachos')
-      .upsert(filasParaGuardar, { onConflict: 'fecha_despacho,nombre_ruta,linea' })
+      .upsert(filasFiltradas, { onConflict: 'fecha_despacho,nombre_ruta,linea,tipo_empaque_clave' })
     if (error) {
       console.error('No se pudo guardar el historial de despachos:', error)
       setDespachoGuardadoMsg({ tipo: 'error', texto: '⚠ No se pudo guardar el historial de ruteros. La impresión continúa igual.' })

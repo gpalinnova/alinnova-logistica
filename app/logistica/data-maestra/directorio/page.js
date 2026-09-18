@@ -127,6 +127,7 @@ export default function DirectorioColegiosPage() {
   const [search, setSearch] = useState('')
   const [filtroLocalidad, setFiltroLocalidad] = useState('todas')
   const [filtroSubzona, setFiltroSubzona] = useState('todas')
+  const [filtroHorno, setFiltroHorno] = useState('todos')
   const [pagina, setPagina] = useState(1)
   const [rutaHabitualPorPunto, setRutaHabitualPorPunto] = useState({})
   const [cargandoHabitual, setCargandoHabitual] = useState(false)
@@ -134,6 +135,7 @@ export default function DirectorioColegiosPage() {
   const [modalExcelAbierto, setModalExcelAbierto] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [guardandoSubzonaId, setGuardandoSubzonaId] = useState(null)
+  const [guardandoHornoId, setGuardandoHornoId] = useState(null)
 
   useEffect(() => { fetchSitios(); fetchSubzonas() }, [])
   useEffect(() => { setPagina(1) }, [search])
@@ -206,11 +208,13 @@ export default function DirectorioColegiosPage() {
     return sitios.filter(s => {
       if (filtroLocalidad !== 'todas' && s.localidad !== filtroLocalidad) return false
       if (filtroSubzona !== 'todas' && s.subzona_codigo !== filtroSubzona) return false
+      if (filtroHorno === 'con' && !s.tiene_horno) return false
+      if (filtroHorno === 'sin' && s.tiene_horno) return false
       if (!term) return true
       return [s.nombre_institucion, String(s.punto_wms), s.localidad, s.nombre_sitio]
         .some(v => v != null && String(v).toLowerCase().includes(term))
     })
-  }, [sitios, search, filtroLocalidad, filtroSubzona])
+  }, [sitios, search, filtroLocalidad, filtroSubzona, filtroHorno])
 
   async function handleSubzonaChange(sitio, subzonaCodigo) {
     setGuardandoSubzonaId(sitio.id)
@@ -223,6 +227,19 @@ export default function DirectorioColegiosPage() {
       setSitios(prev => prev.map(s => (s.id === sitio.id ? { ...s, subzona_codigo: subzonaCodigo || null } : s)))
     }
     setGuardandoSubzonaId(null)
+  }
+
+  async function handleHornoChange(sitio, tieneHorno) {
+    setGuardandoHornoId(sitio.id)
+    const { error } = await supabase.from('logistica_sitios')
+      .update({ tiene_horno: tieneHorno })
+      .eq('id', sitio.id)
+    if (error) {
+      setToastMsg('No se pudo actualizar el horno del colegio.')
+    } else {
+      setSitios(prev => prev.map(s => (s.id === sitio.id ? { ...s, tiene_horno: tieneHorno } : s)))
+    }
+    setGuardandoHornoId(null)
   }
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
@@ -283,6 +300,11 @@ export default function DirectorioColegiosPage() {
                 <option value="todas">Todas las subzonas</option>
                 {subzonas.map(s => <option key={s.codigo} value={s.codigo}>{s.nombre_mostrar}</option>)}
               </select>
+              <select value={filtroHorno} onChange={e => setFiltroHorno(e.target.value)}>
+                <option value="todos">Todos (horno)</option>
+                <option value="con">Con horno</option>
+                <option value="sin">Sin horno</option>
+              </select>
               <input
                 type="text"
                 value={search}
@@ -311,6 +333,7 @@ export default function DirectorioColegiosPage() {
                       <th>Localidad</th>
                       <th>Dirección</th>
                       <th>Subzona</th>
+                      <th style={{ textAlign: 'center' }}>🔥 Horno</th>
                       <th>Ruta habitual</th>
                     </tr>
                   </thead>
@@ -335,6 +358,14 @@ export default function DirectorioColegiosPage() {
                               <option value={s.subzona_codigo}>{subzonasPorCodigo.get(s.subzona_codigo)?.nombre_mostrar || s.subzona_codigo} (inactiva)</option>
                             )}
                           </select>
+                        </td>
+                        <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(s.tiene_horno)}
+                            disabled={guardandoHornoId === s.id}
+                            onChange={e => handleHornoChange(s, e.target.checked)}
+                          />
                         </td>
                         <td>
                           <RutaHabitualCell

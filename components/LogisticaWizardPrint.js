@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
 import { canastillasDe, fmtN, fmtP } from '../lib/logisticaWizardCalc'
 import { fmtDateCorta } from '../lib/logisticaWizardExcel'
+import { filasNoAmPm, separarAmPmPorHorno } from '../lib/logisticaEmpaqueAmpm'
+import { RuteroPageAmPmSinHorno, RuteroPageAmPmConHorno } from './RuteroPageAmPm'
 
 const COL_FALLBACK = { nombre: '?', direccion: '—', localidad: '—', sedeEducativa: '—', sitioEntrega: '?' }
 
@@ -168,11 +170,13 @@ function ResumenOCPage({ datos }) {
   )
 }
 
-export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
+export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride, nombreRutaOverride }) {
   const { productos, filasRender, totales, totalUnidades, totalCanastillas } = construirRutero(ruta, filas, colegios)
   const numProd = productos.length
   const lineaLabel = lineaLabelDeFilas(filas)
   const consolidada = Boolean(ruta.esConsolidada)
+  const titulo = tituloOverride || `RUTERO SUMINISTRO ${lineaLabel.toUpperCase()}`
+  const nombreRutaMostrar = nombreRutaOverride || ruta.nombre
 
   if (!filas.length) {
     return (
@@ -189,7 +193,7 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
     <div className="wizard-print-page landscape">
       <div className="wp-rut-head">
         <div className="wp-rut-head-logo"><div className="wp-logo-box">ALINNOVA</div></div>
-        <div className="wp-rut-head-title">RUTERO SUMINISTRO {lineaLabel.toUpperCase()}</div>
+        <div className="wp-rut-head-title">{titulo}</div>
         <div className="wp-rut-head-code">
           <div className="wp-code-row"><div className="wp-code-lbl">CÓDIGO</div><div className="wp-code-val">RF-FO-002-PD</div></div>
           <div className="wp-code-row"><div className="wp-code-lbl">VERSIÓN</div><div className="wp-code-val">1</div></div>
@@ -198,7 +202,7 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega }) {
       </div>
 
       <div className="wp-rut-info">
-        <div className="wp-ri"><b>RUTA:</b> <span className="wp-val">{consolidada ? `${ruta.nombre} → ${ruta.destinoFijo}` : ruta.nombre}</span></div>
+        <div className="wp-ri"><b>RUTA:</b> <span className="wp-val">{consolidada ? `${nombreRutaMostrar} → ${ruta.destinoFijo}` : nombreRutaMostrar}</span></div>
         <div className="wp-ri"><b>CONDUCTOR:</b> <span className="wp-val">{ruta.conductor || '________________'}</span></div>
         <div className="wp-ri"><b>PLACA:</b> <span className="wp-val">{ruta.placa || '__________'}</span></div>
       </div>
@@ -463,9 +467,17 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
           const puntosOrden = []
           const vistos = new Set()
           filas.forEach(f => { if (!vistos.has(f.punto)) { vistos.add(f.punto); puntosOrden.push(f.punto) } })
+          const fechaRuta = ruta.fechaDespacho || config.fechaEntrega
+          const filasSinAmPm = filasNoAmPm(filas)
+          const { conHorno, sinHorno } = separarAmPmPorHorno(filas, colegios)
+          const mostrarNoAmPm = filasSinAmPm.length > 0 || (!sinHorno.length && !conHorno.length)
+          const mostrarSinHorno = sinHorno.some(f => f.cantidad > 0)
+          const mostrarConHorno = conHorno.some(f => f.cantidad > 0)
           return (
             <div key={ruta.id}>
-              <RuteroPage ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={ruta.fechaDespacho || config.fechaEntrega} />
+              {mostrarNoAmPm && <RuteroPage ruta={ruta} filas={filasSinAmPm} colegios={colegios} fechaEntrega={fechaRuta} />}
+              {mostrarSinHorno && <RuteroPageAmPmSinHorno ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={fechaRuta} />}
+              {mostrarConHorno && <RuteroPageAmPmConHorno ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={fechaRuta} />}
               {puntosOrden.map((punto, idx) => {
                 const filasCol = filas.filter(f => f.punto === punto)
                 const nro = nroInicio + idx + rutaIdx * 100

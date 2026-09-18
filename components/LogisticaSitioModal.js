@@ -12,6 +12,7 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
   const [direccion, setDireccion] = useState(sitio?.direccion || '')
   const [sedeEducativa, setSedeEducativa] = useState(sitio?.sede_educativa || '')
   const [activo, setActivo] = useState(sitio?.activo ?? true)
+  const [tieneHorno, setTieneHorno] = useState(sitio?.tiene_horno ?? false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -89,6 +90,7 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
         direccion: direccion.trim(),
         sede_educativa: sedeEducativa.trim() || null,
         activo,
+        tiene_horno: tieneHorno,
       }
 
       if (isEdit) {
@@ -161,11 +163,19 @@ export default function LogisticaSitioModal({ open, onClose, onSaved, sitio, loc
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="logistica-checkbox-label">
-              <input type="checkbox" checked={activo} onChange={e => setActivo(e.target.checked)} />
-              Activo
-            </label>
+          <div className="form-grid-2">
+            <div className="form-group">
+              <label className="logistica-checkbox-label">
+                <input type="checkbox" checked={activo} onChange={e => setActivo(e.target.checked)} />
+                Activo
+              </label>
+            </div>
+            <div className="form-group">
+              <label className="logistica-checkbox-label">
+                <input type="checkbox" checked={tieneHorno} onChange={e => setTieneHorno(e.target.checked)} />
+                🔥 Tiene horno
+              </label>
+            </div>
           </div>
 
           {error && <p className="modal-error">{error}</p>}
