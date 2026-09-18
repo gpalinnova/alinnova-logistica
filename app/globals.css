@@ -3261,6 +3261,37 @@ button.nav-card {
 
 .wp-resumen-title { font-size: 16pt; font-weight: 900; text-align: center; letter-spacing: 1px; margin-bottom: 16px; }
 
+/* ── Resumen de OC (Paso 7 Logística: en pantalla e imprimible) ── */
+.resumen-oc-screen-wrap {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+}
+.resumen-oc-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  color: #000;
+  background: #fff;
+}
+.resumen-oc-tabla th,
+.resumen-oc-tabla td {
+  border: 1px solid #333;
+  padding: 7px 8px;
+}
+.resumen-oc-tabla th {
+  background: #1a472a;
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+.resumen-oc-tabla td.resumen-oc-c { text-align: center; vertical-align: middle; }
+.resumen-oc-tabla td.resumen-oc-l { text-align: left; vertical-align: middle; }
+.resumen-oc-tabla tr.resumen-oc-alt td { background: #f5f5f5; }
+
 /* ── Editor de umbrales (Grupos de Ruteo — Data Maestra Logística) ── */
 .umbral-header-row {
   display: flex;

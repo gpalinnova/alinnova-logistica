@@ -9,6 +9,11 @@ const COL_FALLBACK = { nombre: '?', direccion: '—', localidad: '—', sedeEduc
 
 const LINEA_LABEL = { panaderia: 'Panadería', am_pm: 'AM-PM', gastronomia: 'Gastronomía' }
 
+// Proveedor fijo del resumen de OC: siempre Alinnova, sin importar la OC de
+// origen — no viene del Excel del cliente.
+const PROVEEDOR_FIJO = '4000026226'
+const NOMBRE_PROVEEDOR_FIJO = 'ALINNOVA SAS'
+
 // La OC llega con líneas mezcladas, así que la línea de producción del
 // rutero/remisión se calcula a partir de los productos que realmente
 // contiene esa ruta/entrega, no de una pantalla fija.
@@ -59,59 +64,106 @@ function shortName(producto) {
   return producto.nombre || producto.nombreCompleto || producto.sap
 }
 
-// Agrega cantidades por producto a nivel de todo el despacho (todas las
-// rutas incluidas en `datos`). Si el mismo producto viene con distinta
-// fecha_entrega o fecha_consumo (varias OCs en un mismo despacho), se
-// mantiene como fila aparte en vez de consolidarse en una sola.
-function buildResumenProductos(datos) {
-  const acc = new Map()
-  datos.forEach(({ filas }) => {
-    filas.forEach(f => {
-      const key = `${f.sap}|${f.fecha_entrega || ''}|${f.fecha_consumo || ''}`
-      if (!acc.has(key)) {
-        acc.set(key, {
-          producto: f.producto,
-          cantidad: 0,
-          fecha_entrega: f.fecha_entrega,
-          fecha_consumo: f.fecha_consumo,
-        })
-      }
-      acc.get(key).cantidad += f.cantidad
+// Arma el resumen de OC: una fila por artículo distinto de cada OC
+// (deduplicado por oc+sap, ya que el mismo artículo puede repetirse en
+// varias rutas cuando se reparte entre distintos colegios). Se ordena por
+// fecha_entrega para que las filas de una misma fecha/OC queden contiguas,
+// preservando el orden de aparición original del Excel dentro de cada
+// fecha (sort estable) para que los bloques de fecha_consumo también
+// queden contiguos tal como los envía el cliente.
+export function buildResumenOC(datos) {
+  const vistos = new Set()
+  const filas = []
+  datos.forEach(({ filas: filasRuta }) => {
+    filasRuta.forEach(f => {
+      const key = `${f.oc}|${f.sap}`
+      if (vistos.has(key)) return
+      vistos.add(key)
+      filas.push({
+        oc: f.oc,
+        sap: f.sap,
+        nombre: f.producto?.nombreCompleto || f.producto?.nombre || f.sap,
+        fecha_entrega: f.fecha_entrega,
+        fecha_consumo_texto: f.fecha_consumo_texto || '',
+      })
     })
   })
-  return Array.from(acc.values()).sort((a, b) => {
-    const na = a.producto?.nombreCompleto || a.producto?.nombre || a.producto?.sap || ''
-    const nb = b.producto?.nombreCompleto || b.producto?.nombre || b.producto?.sap || ''
-    return na.localeCompare(nb, 'es')
-  })
+  filas.sort((a, b) => (a.fecha_entrega || '').localeCompare(b.fecha_entrega || ''))
+  return filas
 }
 
-function ResumenProductosPage({ datos }) {
-  const filas = buildResumenProductos(datos)
+// Calcula, para cada fila, cuántas filas consecutivas comparten el mismo
+// valor (según getValue) a partir de ahí: spans[i] > 0 → esa fila abre un
+// rowSpan de ese tamaño; spans[i] === 0 → la fila queda cubierta por el
+// rowSpan de una fila anterior y no debe renderizar celda en esa columna.
+function computeRowSpans(filas, getValue) {
+  const spans = new Array(filas.length).fill(0)
+  let i = 0
+  while (i < filas.length) {
+    const val = getValue(filas[i])
+    let j = i + 1
+    while (j < filas.length && getValue(filas[j]) === val) j++
+    spans[i] = j - i
+    i = j
+  }
+  return spans
+}
+
+// Tabla de resumen de OC (Proveedor · Nombre_Proveedor · Fecha_Entrega ·
+// Artículo · Nombre · Fechas_consumo), en el formato oficial que espera el
+// cliente. Un solo componente se usa tanto en pantalla (Paso 7) como en el
+// imprimible, para no duplicar el layout.
+export function ResumenOC({ datos }) {
+  const filas = buildResumenOC(datos)
   if (!filas.length) return null
+
+  const spansEntrega = computeRowSpans(filas, f => f.fecha_entrega || '')
+  const spansConsumo = computeRowSpans(filas, f => f.fecha_consumo_texto || '')
+
   return (
-    <div className="wizard-print-page">
+    <>
       <div className="wp-resumen-title">RESUMEN DE PRODUCTOS DESPACHADOS</div>
-      <table className="wp-rem-tabla">
+      <table className="resumen-oc-tabla">
         <thead>
           <tr>
-            <th style={{ textAlign: 'left' }}>PRODUCTO</th>
-            <th style={{ width: 110 }}>CANTIDAD TOTAL</th>
-            <th style={{ width: 120 }}>FECHA DE ENTREGA</th>
-            <th style={{ width: 120 }}>FECHA DE CONSUMO</th>
+            <th>Proveedor</th>
+            <th>Nombre_Proveedor</th>
+            <th>Fecha_Entrega</th>
+            <th>Artículo</th>
+            <th>Nombre</th>
+            <th>Fechas_consumo</th>
           </tr>
         </thead>
         <tbody>
           {filas.map((f, i) => (
-            <tr key={i}>
-              <td className="wp-tdl">{f.producto?.nombreCompleto || f.producto?.nombre || f.producto?.sap}</td>
-              <td className="wp-c-cant">{fmtN(f.cantidad)}</td>
-              <td>{f.fecha_entrega ? fmtDateCorta(f.fecha_entrega) : '—'}</td>
-              <td>{f.fecha_consumo ? fmtDateCorta(f.fecha_consumo) : '—'}</td>
+            <tr key={`${f.oc}-${f.sap}-${i}`} className={i % 2 === 1 ? 'resumen-oc-alt' : undefined}>
+              {i === 0 && <td rowSpan={filas.length} className="resumen-oc-c">{PROVEEDOR_FIJO}</td>}
+              {i === 0 && <td rowSpan={filas.length} className="resumen-oc-c">{NOMBRE_PROVEEDOR_FIJO}</td>}
+              {spansEntrega[i] > 0 && (
+                <td rowSpan={spansEntrega[i]} className="resumen-oc-c">
+                  {f.fecha_entrega ? fmtDateCorta(f.fecha_entrega) : '—'}
+                </td>
+              )}
+              <td className="resumen-oc-c">{f.sap}</td>
+              <td className="resumen-oc-l">{f.nombre}</td>
+              {spansConsumo[i] > 0 && (
+                <td rowSpan={spansConsumo[i]} className="resumen-oc-c">
+                  {f.fecha_consumo_texto || '—'}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
       </table>
+    </>
+  )
+}
+
+function ResumenOCPage({ datos }) {
+  if (!buildResumenOC(datos).length) return null
+  return (
+    <div className="wizard-print-page">
+      <ResumenOC datos={datos} />
     </div>
   )
 }
@@ -433,7 +485,7 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
             </div>
           )
         })}
-        <ResumenProductosPage datos={datos} />
+        <ResumenOCPage datos={datos} />
       </div>
     </div>,
     document.body

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import PageHeader from './PageHeader'
-import LogisticaWizardPrint from './LogisticaWizardPrint'
+import LogisticaWizardPrint, { ResumenOC, buildResumenOC } from './LogisticaWizardPrint'
 import LogisticaDirectorioModal from './LogisticaDirectorioModal'
 import { supabase } from '../lib/supabase'
 import { readFileAsArrayBuffer } from '../lib/parseRutasExcel'
@@ -1227,6 +1227,16 @@ export default function LogisticaOperacionesWizard() {
                   </div>
                 )
               })}
+
+              {(() => {
+                const datosResumen = rutas.map(buildRutaData)
+                if (!buildResumenOC(datosResumen).length) return null
+                return (
+                  <div className="resumen-oc-screen-wrap">
+                    <ResumenOC datos={datosResumen} />
+                  </div>
+                )
+              })()}
 
               <div className="page-toolbar spread">
                 <button className="btn-secondary" onClick={() => setStep(6)}>← Conductores</button>
