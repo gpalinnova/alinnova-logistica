@@ -67,31 +67,51 @@ function shortName(producto) {
 }
 
 // Arma el resumen de OC: una fila por artículo distinto de cada OC
-// (deduplicado por oc+sap, ya que el mismo artículo puede repetirse en
-// varias rutas cuando se reparte entre distintos colegios). Se ordena por
-// fecha_entrega para que las filas de una misma fecha/OC queden contiguas,
-// preservando el orden de aparición original del Excel dentro de cada
-// fecha (sort estable) para que los bloques de fecha_consumo también
-// queden contiguos tal como los envía el cliente.
+// (agrupado por oc+sap, ya que el mismo artículo puede repetirse en varias
+// rutas cuando se reparte entre distintos colegios). Se ordena por
+// fecha_entrega para que las filas de una misma fecha/OC queden contiguas.
+// Un mismo oc+sap puede repetirse en varias filas de origen (una por
+// colegio/ruta) y, aunque es raro, esas filas pueden traer fecha_entrega
+// distinta entre sí — por eso se acumulan todas las fecha_entrega vistas
+// en un Set en lugar de quedarnos solo con la de la primera fila.
 export function buildResumenOC(datos) {
-  const vistos = new Set()
-  const filas = []
+  const grupos = new Map()
   datos.forEach(({ filas: filasRuta }) => {
     filasRuta.forEach(f => {
       const key = `${f.oc}|${f.sap}`
-      if (vistos.has(key)) return
-      vistos.add(key)
-      filas.push({
-        oc: f.oc,
-        sap: f.sap,
-        nombre: f.producto?.nombreCompleto || f.producto?.nombre || f.sap,
-        fecha_entrega: f.fecha_entrega,
-        fecha_consumo_texto: f.fecha_consumo_texto || '',
-      })
+      if (!grupos.has(key)) {
+        grupos.set(key, {
+          oc: f.oc,
+          sap: f.sap,
+          nombre: f.producto?.nombreCompleto || f.producto?.nombre || f.sap,
+          fechasEntrega: new Set(),
+          fecha_consumo: f.fecha_consumo || null,
+          fecha_consumo_texto: f.fecha_consumo_texto || '',
+        })
+      }
+      const g = grupos.get(key)
+      if (f.fecha_entrega) g.fechasEntrega.add(f.fecha_entrega)
     })
   })
-  filas.sort((a, b) => (a.fecha_entrega || '').localeCompare(b.fecha_entrega || ''))
+  const filas = Array.from(grupos.values()).map(g => ({
+    ...g,
+    fechasEntregaOrdenadas: Array.from(g.fechasEntrega).sort(),
+  }))
+  filas.sort((a, b) => (a.fechasEntregaOrdenadas[0] || '').localeCompare(b.fechasEntregaOrdenadas[0] || ''))
   return filas
+}
+
+// fecha_consumo llega parseada a ISO cuando la celda trae una fecha real;
+// cuando es texto libre (p.ej. "21 Y 22 SEPTIEMBRE 2026") no se pudo
+// parsear y se muestra tal cual vino, sin intentar formatearla.
+function fmtFechaConsumo(f) {
+  if (f.fecha_consumo) return fmtDateCorta(f.fecha_consumo)
+  return f.fecha_consumo_texto || '—'
+}
+
+function fmtFechaEntrega(fechasOrdenadas) {
+  if (!fechasOrdenadas.length) return '—'
+  return fechasOrdenadas.map(fmtDateCorta).join(', ')
 }
 
 // Calcula, para cada fila, cuántas filas consecutivas comparten el mismo
@@ -119,8 +139,8 @@ export function ResumenOC({ datos }) {
   const filas = buildResumenOC(datos)
   if (!filas.length) return null
 
-  const spansEntrega = computeRowSpans(filas, f => f.fecha_entrega || '')
-  const spansConsumo = computeRowSpans(filas, f => f.fecha_consumo_texto || '')
+  const spansEntrega = computeRowSpans(filas, f => f.fechasEntregaOrdenadas.join(','))
+  const spansConsumo = computeRowSpans(filas, f => f.fecha_consumo || f.fecha_consumo_texto || '')
 
   return (
     <>
@@ -143,14 +163,14 @@ export function ResumenOC({ datos }) {
               {i === 0 && <td rowSpan={filas.length} className="resumen-oc-c">{NOMBRE_PROVEEDOR_FIJO}</td>}
               {spansEntrega[i] > 0 && (
                 <td rowSpan={spansEntrega[i]} className="resumen-oc-c">
-                  {f.fecha_entrega ? fmtDateCorta(f.fecha_entrega) : '—'}
+                  {fmtFechaEntrega(f.fechasEntregaOrdenadas)}
                 </td>
               )}
               <td className="resumen-oc-c">{f.sap}</td>
               <td className="resumen-oc-l">{f.nombre}</td>
               {spansConsumo[i] > 0 && (
                 <td rowSpan={spansConsumo[i]} className="resumen-oc-c">
-                  {f.fecha_consumo_texto || '—'}
+                  {fmtFechaConsumo(f)}
                 </td>
               )}
             </tr>
@@ -158,15 +178,6 @@ export function ResumenOC({ datos }) {
         </tbody>
       </table>
     </>
-  )
-}
-
-function ResumenOCPage({ datos }) {
-  if (!buildResumenOC(datos).length) return null
-  return (
-    <div className="wizard-print-page">
-      <ResumenOC datos={datos} />
-    </div>
   )
 }
 
@@ -497,7 +508,6 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
             </div>
           )
         })}
-        <ResumenOCPage datos={datos} />
       </div>
     </div>,
     document.body
