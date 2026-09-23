@@ -3145,7 +3145,12 @@ button.nav-card {
   margin: 0 auto 8mm;
   box-sizing: border-box;
 }
-.wizard-print-page.landscape { width: 297mm; min-height: 210mm; padding: 6mm 8mm; }
+.wizard-print-page.landscape { width: 279.4mm; min-height: 215.9mm; padding: 8mm; }
+/* Rutero: hoja carta horizontal fija (279.4 x 215.9 mm, márgenes de 8 mm).
+   El contenido (.wp-rut-fit) se escala desde JS para caber en 1 sola hoja. */
+.wizard-print-page.wp-rut-page { height: 215.9mm; min-height: 0; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
+.wp-rut-fit { transform-origin: top left; }
+.wp-rut-aviso { width: 279.4mm; margin: 0 auto 8px; box-sizing: border-box; }
 
 @media print {
   body > *:not(.wizard-print-root) { display: none !important; }
@@ -3154,7 +3159,7 @@ button.nav-card {
   .no-print { display: none !important; }
 
   @page wizard-portrait { size: A4 portrait; margin: 8mm 10mm; }
-  @page wizard-landscape { size: A4 landscape; margin: 6mm 8mm; }
+  @page wizard-landscape { size: letter landscape; margin: 8mm; }
 
   .wizard-print-page {
     page: wizard-portrait;
@@ -3166,6 +3171,9 @@ button.nav-card {
     border: none;
   }
   .wizard-print-page.landscape { page: wizard-landscape; width: 100%; min-height: 0; }
+  /* Área imprimible de carta horizontal con márgenes de 8 mm: 263.4 x 199.9 mm
+     (alto con 1 mm de holgura para que nunca se desborde a una 2.ª hoja). */
+  .wizard-print-page.wp-rut-page { width: 263.4mm; height: 198.9mm; padding: 0; overflow: hidden; }
   .wizard-print-page:last-child { page-break-after: auto; }
 }
 
@@ -3188,8 +3196,8 @@ button.nav-card {
 .wp-ri { display: flex; gap: 5px; }
 .wp-val { text-decoration: underline; min-width: 100px; display: inline-block; }
 
-.wp-rut-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 8px; }
-.wp-rut-table th, .wp-rut-table td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: middle; }
+.wp-rut-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 8px; }
+.wp-rut-table th, .wp-rut-table td { border: 1px solid #333; padding: 5px; text-align: center; vertical-align: middle; overflow-wrap: anywhere; word-wrap: break-word; }
 .wp-rut-table th { background: #d5d5d5; font-weight: 700; font-size: 8pt; }
 .wp-h-group { background: #b0b0b0 !important; font-size: 9pt; }
 .wp-total-row td { background: #f0f0f0; font-weight: 700; }
@@ -3206,7 +3214,7 @@ button.nav-card {
 .wp-val-big { font-size: 12pt; font-weight: 700; }
 
 .wp-rut-lote { margin-top: 8px; border: 1px solid #000; font-size: 8pt; }
-.wp-rut-lote table { width: 100%; border-collapse: collapse; }
+.wp-rut-lote table { width: 100%; table-layout: fixed; border-collapse: collapse; }
 .wp-rut-lote th, .wp-rut-lote td { border: 1px solid #333; padding: 3px 6px; text-align: center; }
 .wp-rut-lote th { background: #d5d5d5; font-size: 7pt; font-weight: 700; }
 .wp-rut-lote td { height: 20px; }

@@ -1,7 +1,7 @@
 'use client'
 
 import { createPortal } from 'react-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { canastillasDe, fmtN, fmtP } from '../lib/logisticaWizardCalc'
 import { fmtDateCorta, normalizarFecha } from '../lib/logisticaWizardExcel'
 import { filasNoAmPm, separarAmPmPorHorno } from '../lib/logisticaEmpaqueAmpm'
@@ -60,6 +60,66 @@ function construirRutero(ruta, filas, colegios) {
   const totalCanastillas = totales.reduce((s, t) => s + t.canastTotal, 0)
 
   return { productos, filasRender, totales, totalUnidades, totalCanastillas }
+}
+
+// Tamaño base de la letra del cuerpo de la tabla del rutero (.wp-rut-table)
+// y mínimo legible: por debajo de esto se avisa en pantalla.
+const RUT_FONT_BASE_PT = 8.5
+const RUT_FONT_MIN_PT = 7
+// Margen de seguridad para diferencias de render entre pantalla e impresora.
+const RUT_FIT_HOLGURA = 0.97
+
+// Anchos de columna del rutero en %, según el número de referencias: las
+// columnas de producto (referencia + canastillas + unidades) se reparten
+// hasta 60 % del ancho; ID, institución y dirección se quedan con el resto.
+function anchosColumnasRutero(numProd) {
+  const porProducto = numProd ? Math.min(13, 60 / numProd) : 0
+  const fijo = 100 - porProducto * numProd
+  const id = 6
+  return {
+    id,
+    nombre: (fijo - id) * 0.55,
+    direccion: (fijo - id) * 0.45,
+    ref: porProducto * 0.42,
+    canast: porProducto * 0.31,
+    und: porProducto * 0.27,
+  }
+}
+
+// Ajusta el contenido del rutero a UNA hoja carta horizontal: mide el
+// bloque completo (encabezado, tabla, totales, firma y lote) y, si no cabe
+// en el área imprimible de la página, lo reduce con transform: scale. El
+// ancho de maquetación se agranda en la misma proporción (ancho / escala)
+// para que, ya escalado, siga ocupando el 100 % del ancho útil. Devuelve la
+// escala aplicada.
+function ajustarRuteroAUnaHoja(page, fit) {
+  const cs = getComputedStyle(page)
+  const availW = page.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+  const availH = (page.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) * RUT_FIT_HOLGURA
+  if (availW <= 0 || availH <= 0) return 1
+
+  // ¿Cabe el contenido maquetado a ancho availW / s y reducido a escala s?
+  const cabe = s => {
+    fit.style.width = `${availW / s}px`
+    return fit.scrollHeight * s <= availH && fit.scrollWidth * s <= availW + 1
+  }
+
+  // Búsqueda binaria de la mayor escala que cabe: al bajar la escala el
+  // ancho de maquetación crece y la altura escalada solo baja.
+  let escala = 1
+  if (!cabe(1)) {
+    let lo = 0.2
+    let hi = 1
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2
+      if (cabe(mid)) lo = mid
+      else hi = mid
+    }
+    escala = lo
+  }
+  fit.style.width = `${availW / escala}px`
+  fit.style.transform = escala < 1 ? `scale(${escala})` : ''
+  return escala
 }
 
 function shortName(producto) {
@@ -226,6 +286,17 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride
   const consolidada = Boolean(ruta.esConsolidada)
   const titulo = tituloOverride || `RUTERO SUMINISTRO ${lineaLabel.toUpperCase()}`
   const nombreRutaMostrar = nombreRutaOverride || ruta.nombre
+  const anchos = anchosColumnasRutero(numProd)
+
+  const pageRef = useRef(null)
+  const fitRef = useRef(null)
+  const [letraChica, setLetraChica] = useState(false)
+
+  useLayoutEffect(() => {
+    if (!pageRef.current || !fitRef.current) return
+    const escala = ajustarRuteroAUnaHoja(pageRef.current, fitRef.current)
+    setLetraChica(RUT_FONT_BASE_PT * escala < RUT_FONT_MIN_PT)
+  })
 
   if (!filas.length) {
     return (
@@ -239,7 +310,12 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride
   const colegiosCount = new Set(filas.map(f => f.punto)).size
 
   return (
-    <div className="wizard-print-page landscape">
+    <>
+    {letraChica && (
+      <div className="logistica-warning-box no-print wp-rut-aviso">⚠️ Esta ruta tiene muchos colegios; la letra del rutero queda pequeña.</div>
+    )}
+    <div className="wizard-print-page landscape wp-rut-page" ref={pageRef}>
+      <div className="wp-rut-fit" ref={fitRef}>
       <div className="wp-rut-head">
         <div className="wp-rut-head-logo"><div className="wp-logo-box">ALINNOVA</div></div>
         <div className="wp-rut-head-title">{titulo}</div>
@@ -257,16 +333,26 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride
       </div>
 
       <table className="wp-rut-table">
+        <colgroup>
+          <col style={{ width: `${anchos.id}%` }} />
+          <col style={{ width: `${anchos.nombre}%` }} />
+          <col style={{ width: `${anchos.direccion}%` }} />
+          {productos.map(p => <col key={`cr-${p.sap}`} style={{ width: `${anchos.ref}%` }} />)}
+          {productos.map(p => [
+            <col key={`cc-${p.sap}`} style={{ width: `${anchos.canast}%` }} />,
+            <col key={`cu-${p.sap}`} style={{ width: `${anchos.und}%` }} />,
+          ])}
+        </colgroup>
         <thead>
           <tr>
-            <th rowSpan={3} style={{ width: 55 }}>ID SITIO<br />ENTREGA</th>
-            <th rowSpan={3} style={{ width: 155 }}>NOMBRE INSTITUCIÓN<br />EDUCATIVA</th>
-            <th rowSpan={3} style={{ width: 135 }}>DIRECCIÓN DE ENTREGA</th>
+            <th rowSpan={3}>ID SITIO<br />ENTREGA</th>
+            <th rowSpan={3}>NOMBRE INSTITUCIÓN<br />EDUCATIVA</th>
+            <th rowSpan={3}>DIRECCIÓN DE ENTREGA</th>
             <th colSpan={numProd} className="wp-h-group">REFERENCIA</th>
             <th colSpan={numProd * 2} className="wp-h-group">EMBALAJE POR REFERENCIA</th>
           </tr>
           <tr>
-            {productos.map(p => <th key={`r-${p.sap}`} rowSpan={2} style={{ width: 55, fontSize: '7pt' }}>{shortName(p)}</th>)}
+            {productos.map(p => <th key={`r-${p.sap}`} rowSpan={2} style={{ fontSize: '7pt' }}>{shortName(p)}</th>)}
             {productos.map(p => (
               <th key={`e-${p.sap}`} colSpan={2} className="wp-h-group" style={{ fontSize: '7pt' }}>
                 {shortName(p)}<br /><span style={{ fontSize: '6pt', fontWeight: 400 }}>{p.embalaje || 0} UND</span>
@@ -275,8 +361,8 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride
           </tr>
           <tr>
             {productos.map(p => [
-              <th key={`c-${p.sap}`} style={{ width: 32, fontSize: '6.5pt' }}>CANAST</th>,
-              <th key={`u-${p.sap}`} style={{ width: 28, fontSize: '6.5pt' }}>UND</th>,
+              <th key={`c-${p.sap}`} style={{ fontSize: '6.5pt' }}>CANAST</th>,
+              <th key={`u-${p.sap}`} style={{ fontSize: '6.5pt' }}>UND</th>,
             ])}
           </tr>
         </thead>
@@ -349,7 +435,9 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride
           </tbody>
         </table>
       </div>
+      </div>
     </div>
+    </>
   )
 }
 
