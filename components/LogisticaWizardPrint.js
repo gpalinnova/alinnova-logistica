@@ -69,11 +69,9 @@ function shortName(producto) {
 // Arma el resumen de OC: una fila por artículo distinto de cada OC
 // (agrupado por oc+sap, ya que el mismo artículo puede repetirse en varias
 // rutas cuando se reparte entre distintos colegios). Se ordena por
-// fecha_entrega para que las filas de una misma fecha/OC queden contiguas.
-// Un mismo oc+sap puede repetirse en varias filas de origen (una por
-// colegio/ruta) y, aunque es raro, esas filas pueden traer fecha_entrega
-// distinta entre sí — por eso se acumulan todas las fecha_entrega vistas
-// en un Set en lugar de quedarnos solo con la de la primera fila.
+// fecha_consumo para que las filas de una misma fecha queden contiguas
+// (necesario para el rowSpan de Fechas_consumo). La Fecha_Entrega de esta
+// vista ya no sale del Excel: se edita a mano en ResumenOC.
 export function buildResumenOC(datos) {
   const grupos = new Map()
   datos.forEach(({ filas: filasRuta }) => {
@@ -84,20 +82,14 @@ export function buildResumenOC(datos) {
           oc: f.oc,
           sap: f.sap,
           nombre: f.producto?.nombreCompleto || f.producto?.nombre || f.sap,
-          fechasEntrega: new Set(),
           fecha_consumo: f.fecha_consumo || null,
           fecha_consumo_texto: f.fecha_consumo_texto || '',
         })
       }
-      const g = grupos.get(key)
-      if (f.fecha_entrega) g.fechasEntrega.add(f.fecha_entrega)
     })
   })
-  const filas = Array.from(grupos.values()).map(g => ({
-    ...g,
-    fechasEntregaOrdenadas: Array.from(g.fechasEntrega).sort(),
-  }))
-  filas.sort((a, b) => (a.fechasEntregaOrdenadas[0] || '').localeCompare(b.fechasEntregaOrdenadas[0] || ''))
+  const filas = Array.from(grupos.values())
+  filas.sort((a, b) => (a.fecha_consumo || a.fecha_consumo_texto || '').localeCompare(b.fecha_consumo || b.fecha_consumo_texto || ''))
   return filas
 }
 
@@ -109,9 +101,17 @@ function fmtFechaConsumo(f) {
   return f.fecha_consumo_texto || '—'
 }
 
-function fmtFechaEntrega(fechasOrdenadas) {
-  if (!fechasOrdenadas.length) return '—'
-  return fechasOrdenadas.map(fmtDateCorta).join(', ')
+// Sugerido por defecto para la Fecha_Entrega editable de ResumenOC: hoy + 1
+// día en hora LOCAL. new Date().toISOString() queda prohibido a propósito:
+// después de las 7pm en Bogotá (UTC-5) ya cruzó medianoche UTC y daría
+// pasado mañana.
+function mañanaLocalISO() {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 // Calcula, para cada fila, cuántas filas consecutivas comparten el mismo
@@ -133,13 +133,16 @@ function computeRowSpans(filas, getValue) {
 
 // Tabla de resumen de OC (Proveedor · Nombre_Proveedor · Fecha_Entrega ·
 // Artículo · Nombre · Fechas_consumo), en el formato oficial que espera el
-// cliente. Un solo componente se usa tanto en pantalla (Paso 7) como en el
-// imprimible, para no duplicar el layout.
+// cliente. Se usa solo en pantalla (Paso 7), para captura. La Fecha_Entrega
+// ya no sale del Excel: es editable acá, sugerida en mañana por defecto, y
+// vive en un useState local (no se persiste; al recargar vuelve a mañana).
 export function ResumenOC({ datos }) {
   const filas = buildResumenOC(datos)
+  const [fechaEntrega, setFechaEntrega] = useState(mañanaLocalISO)
+  const [editandoFecha, setEditandoFecha] = useState(false)
+
   if (!filas.length) return null
 
-  const spansEntrega = computeRowSpans(filas, f => f.fechasEntregaOrdenadas.join(','))
   const spansConsumo = computeRowSpans(filas, f => f.fecha_consumo || f.fecha_consumo_texto || '')
 
   return (
@@ -161,9 +164,33 @@ export function ResumenOC({ datos }) {
             <tr key={`${f.oc}-${f.sap}-${i}`} className={i % 2 === 1 ? 'resumen-oc-alt' : undefined}>
               {i === 0 && <td rowSpan={filas.length} className="resumen-oc-c">{PROVEEDOR_FIJO}</td>}
               {i === 0 && <td rowSpan={filas.length} className="resumen-oc-c">{NOMBRE_PROVEEDOR_FIJO}</td>}
-              {spansEntrega[i] > 0 && (
-                <td rowSpan={spansEntrega[i]} className="resumen-oc-c">
-                  {fmtFechaEntrega(f.fechasEntregaOrdenadas)}
+              {i === 0 && (
+                <td rowSpan={filas.length} className="resumen-oc-c">
+                  {editandoFecha ? (
+                    <input
+                      type="date"
+                      className="resumen-oc-fecha-input"
+                      value={fechaEntrega}
+                      autoFocus
+                      onChange={e => {
+                        if (!e.target.value) return
+                        setFechaEntrega(e.target.value)
+                        setEditandoFecha(false)
+                      }}
+                      onBlur={() => setEditandoFecha(false)}
+                    />
+                  ) : (
+                    <span className="resumen-oc-fecha-editable" onClick={() => setEditandoFecha(true)}>
+                      {fmtDateCorta(fechaEntrega)}
+                      <span
+                        className="resumen-oc-fecha-icon"
+                        title="Editar fecha de entrega"
+                        onClick={e => { e.stopPropagation(); setEditandoFecha(true) }}
+                      >
+                        {' '}✏️
+                      </span>
+                    </span>
+                  )}
                 </td>
               )}
               <td className="resumen-oc-c">{f.sap}</td>

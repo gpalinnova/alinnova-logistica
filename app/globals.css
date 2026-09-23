@@ -3291,6 +3291,9 @@ button.nav-card {
 .resumen-oc-tabla td.resumen-oc-c { text-align: center; vertical-align: middle; }
 .resumen-oc-tabla td.resumen-oc-l { text-align: left; vertical-align: middle; }
 .resumen-oc-tabla tr.resumen-oc-alt td { background: #f5f5f5; }
+.resumen-oc-fecha-editable { cursor: pointer; }
+.resumen-oc-fecha-icon { color: #9ca3af; font-size: 8pt; }
+.resumen-oc-fecha-input { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; }
 
 /* ── Editor de umbrales (Grupos de Ruteo — Data Maestra Logística) ── */
 .umbral-header-row {
