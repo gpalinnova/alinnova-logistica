@@ -3,7 +3,7 @@
 import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
 import { canastillasDe, fmtN, fmtP } from '../lib/logisticaWizardCalc'
-import { fmtDateCorta } from '../lib/logisticaWizardExcel'
+import { fmtDateCorta, normalizarFecha } from '../lib/logisticaWizardExcel'
 import { filasNoAmPm, separarAmPmPorHorno } from '../lib/logisticaEmpaqueAmpm'
 import { RuteroPageAmPmSinHorno, RuteroPageAmPmConHorno } from './RuteroPageAmPm'
 
@@ -66,38 +66,49 @@ function shortName(producto) {
   return producto.nombre || producto.nombreCompleto || producto.sap
 }
 
-// Arma el resumen de OC: una fila por artículo distinto de cada OC
-// (agrupado por oc+sap, ya que el mismo artículo puede repetirse en varias
-// rutas cuando se reparte entre distintos colegios). Se ordena por
-// fecha_consumo para que las filas de una misma fecha queden contiguas
-// (necesario para el rowSpan de Fechas_consumo). La Fecha_Entrega de esta
-// vista ya no sale del Excel: se edita a mano en ResumenOC.
+// Arma el resumen de OC: una fila por artículo distinto, agrupado por
+// Proveedor (fijo) + Fecha_Entrega normalizada + Artículo + Fecha de
+// consumo normalizada — NO por Numero OC. El mismo artículo/entrega/consumo
+// puede venir repartido bajo distintos números de OC en el Excel del
+// cliente (o con la fecha de consumo escrita en formatos distintos, p.ej.
+// "25/09/2026" vs "25-09-26"), y el resumen debe mostrar un solo renglón
+// para eso. normalizarFecha() hace que ambos formatos caigan en la misma
+// llave; cuando una fecha no se puede normalizar, se agrupa por su texto
+// crudo (mejor que perder la fila). Las unidades se suman en crudo al
+// fusionar renglones. Se ordena por fecha de consumo normalizada para que
+// el rowSpan de Fechas_consumo agrupe filas contiguas correctamente.
 export function buildResumenOC(datos) {
   const grupos = new Map()
   datos.forEach(({ filas: filasRuta }) => {
     filasRuta.forEach(f => {
-      const key = `${f.oc}|${f.sap}`
+      const entregaNorm = normalizarFecha(f.fecha_entrega) || f.fecha_entrega || ''
+      const consumoNorm = normalizarFecha(f.fecha_consumo_texto) || normalizarFecha(f.fecha_consumo)
+      const consumoKey = consumoNorm || f.fecha_consumo_texto || ''
+      const key = `${PROVEEDOR_FIJO}|${entregaNorm}|${f.sap}|${consumoKey}`
       if (!grupos.has(key)) {
         grupos.set(key, {
           oc: f.oc,
           sap: f.sap,
           nombre: f.producto?.nombreCompleto || f.producto?.nombre || f.sap,
-          fecha_consumo: f.fecha_consumo || null,
+          fecha_consumo_norm: consumoNorm,
           fecha_consumo_texto: f.fecha_consumo_texto || '',
+          cantidad: 0,
         })
       }
+      grupos.get(key).cantidad += f.cantidad || 0
     })
   })
   const filas = Array.from(grupos.values())
-  filas.sort((a, b) => (a.fecha_consumo || a.fecha_consumo_texto || '').localeCompare(b.fecha_consumo || b.fecha_consumo_texto || ''))
+  filas.sort((a, b) => (a.fecha_consumo_norm || a.fecha_consumo_texto || '').localeCompare(b.fecha_consumo_norm || b.fecha_consumo_texto || ''))
   return filas
 }
 
-// fecha_consumo llega parseada a ISO cuando la celda trae una fecha real;
+// fecha_consumo_norm ya viene normalizada (dd/mm/yy, dd-mm-yy, dd.mm.yyyy,
+// serial de Excel, etc. — todo cae en el mismo formato dd/mm/yyyy acá);
 // cuando es texto libre (p.ej. "21 Y 22 SEPTIEMBRE 2026") no se pudo
-// parsear y se muestra tal cual vino, sin intentar formatearla.
+// interpretar como fecha y se muestra tal cual vino, sin romper la tabla.
 function fmtFechaConsumo(f) {
-  if (f.fecha_consumo) return fmtDateCorta(f.fecha_consumo)
+  if (f.fecha_consumo_norm) return fmtDateCorta(f.fecha_consumo_norm)
   return f.fecha_consumo_texto || '—'
 }
 
@@ -143,7 +154,7 @@ export function ResumenOC({ datos }) {
 
   if (!filas.length) return null
 
-  const spansConsumo = computeRowSpans(filas, f => f.fecha_consumo || f.fecha_consumo_texto || '')
+  const spansConsumo = computeRowSpans(filas, f => f.fecha_consumo_norm || f.fecha_consumo_texto || '')
 
   return (
     <>
