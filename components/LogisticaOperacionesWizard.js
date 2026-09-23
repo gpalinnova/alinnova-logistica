@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import PageHeader from './PageHeader'
-import LogisticaWizardPrint, { ResumenOC, buildResumenOC } from './LogisticaWizardPrint'
+import LogisticaWizardPrint, { ResumenOC, buildResumenOC, agruparRemisiones } from './LogisticaWizardPrint'
 import LogisticaDirectorioModal from './LogisticaDirectorioModal'
 import { supabase } from '../lib/supabase'
 import { readFileAsArrayBuffer } from '../lib/parseRutasExcel'
@@ -1232,7 +1232,7 @@ export default function LogisticaOperacionesWizard() {
               {rutas.map(r => {
                 const stats = getStatsRuta(r)
                 const filas = getFilasRuta(r)
-                const colegiosCount = new Set(filas.map(f => f.punto)).size
+                const remisionesCount = agruparRemisiones(filas).length
                 return (
                   <div key={r.id} className="wizard-ruta-card">
                     <div className="wizard-ruta-card-head">
@@ -1242,7 +1242,7 @@ export default function LogisticaOperacionesWizard() {
                       </div>
                     </div>
                     <div className="wizard-ruta-stats">
-                      <div className="wizard-st"><b>{colegiosCount}</b><span>Remisiones</span></div>
+                      <div className="wizard-st"><b>{remisionesCount}</b><span>Remisiones</span></div>
                       <div className="wizard-st"><b>{fmtN(stats.cant)}</b><span>Und</span></div>
                       <div className="wizard-st"><b>{fmtN(stats.canast)}</b><span>Canast</span></div>
                     </div>

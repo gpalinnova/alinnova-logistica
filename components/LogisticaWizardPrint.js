@@ -353,9 +353,30 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride
   )
 }
 
-function RemisionPage({ ruta, punto, filasCol, nro, fechaEmision, fechaEntrega, colegios }) {
+// Regla del cliente: la unidad mínima de remisión es colegio + número de OC.
+// Dos líneas con distinto número de OC nunca se suman ni se fusionan, así
+// sea 1 unidad. Orden: colegios en el orden en que aparecen en la ruta y,
+// dentro del mismo colegio, OC ascendente.
+export function agruparRemisiones(filas) {
+  const porPunto = new Map()
+  filas.forEach(f => {
+    if (!porPunto.has(f.punto)) porPunto.set(f.punto, new Map())
+    const porOc = porPunto.get(f.punto)
+    const oc = f.oc || ''
+    if (!porOc.has(oc)) porOc.set(oc, [])
+    porOc.get(oc).push(f)
+  })
+  const remisiones = []
+  porPunto.forEach((porOc, punto) => {
+    Array.from(porOc.keys())
+      .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+      .forEach(oc => remisiones.push({ punto, oc, filas: porOc.get(oc) }))
+  })
+  return remisiones
+}
+
+function RemisionPage({ ruta, punto, oc, filasCol, nro, fechaEmision, fechaEntrega, colegios }) {
   const col = colegios[punto] || { ...COL_FALLBACK, punto }
-  const oc = filasCol[0]?.oc
   const lineaLabel = lineaLabelDeFilas(filasCol)
 
   const itemsMap = new Map()
@@ -389,6 +410,7 @@ function RemisionPage({ ruta, punto, filasCol, nro, fechaEmision, fechaEntrega, 
       </div>
 
       <div className="wp-rem-inst">
+        <div><b>Orden de Compra:</b> {oc || '—'}</div>
         <div><b>Institución:</b> {col.nombre}</div>
         <div><b>Sitio de Entrega:</b> {col.sitioEntrega || col.nombre}</div>
         <div><b>Dirección:</b> {col.direccion || '—'}</div>
@@ -513,9 +535,7 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
       <div className="wp-preview-mount">
         {datos.map(({ ruta, filas }) => {
           const rutaIdx = rutasIndex.get(ruta.id) || 0
-          const puntosOrden = []
-          const vistos = new Set()
-          filas.forEach(f => { if (!vistos.has(f.punto)) { vistos.add(f.punto); puntosOrden.push(f.punto) } })
+          const remisiones = agruparRemisiones(filas)
           const fechaRuta = ruta.fechaDespacho || config.fechaEntrega
           const filasSinAmPm = filasNoAmPm(filas)
           const { conHorno, sinHorno } = separarAmPmPorHorno(filas, colegios)
@@ -527,15 +547,15 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
               {mostrarNoAmPm && <RuteroPage ruta={ruta} filas={filasSinAmPm} colegios={colegios} fechaEntrega={fechaRuta} />}
               {mostrarSinHorno && <RuteroPageAmPmSinHorno ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={fechaRuta} />}
               {mostrarConHorno && <RuteroPageAmPmConHorno ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={fechaRuta} />}
-              {puntosOrden.map((punto, idx) => {
-                const filasCol = filas.filter(f => f.punto === punto)
+              {remisiones.map((rem, idx) => {
                 const nro = nroInicio + idx + rutaIdx * 100
                 return (
                   <RemisionPage
-                    key={punto}
+                    key={`${rem.punto}|${rem.oc}`}
                     ruta={ruta}
-                    punto={punto}
-                    filasCol={filasCol}
+                    punto={rem.punto}
+                    oc={rem.oc}
+                    filasCol={rem.filas}
                     nro={nro}
                     fechaEmision={config.fechaEmision}
                     fechaEntrega={config.fechaEntrega}
