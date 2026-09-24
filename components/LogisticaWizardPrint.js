@@ -127,24 +127,27 @@ function shortName(producto) {
 }
 
 // Arma el resumen de OC: una fila por artículo distinto, agrupado por
-// Proveedor (fijo) + Fecha_Entrega normalizada + Artículo + Fecha de
-// consumo normalizada — NO por Numero OC. El mismo artículo/entrega/consumo
-// puede venir repartido bajo distintos números de OC en el Excel del
-// cliente (o con la fecha de consumo escrita en formatos distintos, p.ej.
-// "25/09/2026" vs "25-09-26"), y el resumen debe mostrar un solo renglón
-// para eso. normalizarFecha() hace que ambos formatos caigan en la misma
-// llave; cuando una fecha no se puede normalizar, se agrupa por su texto
-// crudo (mejor que perder la fila). Las unidades se suman en crudo al
-// fusionar renglones. Se ordena por fecha de consumo normalizada para que
-// el rowSpan de Fechas_consumo agrupe filas contiguas correctamente.
-export function buildResumenOC(datos) {
+// Proveedor (fijo) + Fecha_Entrega MOSTRADA (la editable de la tabla, no la
+// del Excel) + Artículo + Fecha de consumo normalizada — NO por Numero OC
+// (en este resumen las OC distintas se suman; las remisiones sí separan por
+// OC, con agruparRemisiones). La Fecha_Entrega del Excel no entra en la
+// llave: el mismo artículo puede venir con entregas 24/09 y 25/09 en el
+// archivo, pero la tabla muestra una sola fecha editable y debe salir un
+// solo renglón. fecha_consumo_norm viene del parser con el orden día/mes
+// detectado para todo el archivo; cuando no se puede normalizar se agrupa
+// por el texto crudo. Las unidades se suman en crudo. Se ordena (sort
+// estable) por fecha de consumo para que el rowSpan de Fechas_consumo
+// agrupe filas contiguas; dentro de cada fecha queda el orden de primer
+// aparecimiento de cada artículo.
+export function buildResumenOC(datos, fechaEntregaMostrada = '') {
   const grupos = new Map()
   datos.forEach(({ filas: filasRuta }) => {
     filasRuta.forEach(f => {
-      const entregaNorm = normalizarFecha(f.fecha_entrega) || f.fecha_entrega || ''
-      const consumoNorm = normalizarFecha(f.fecha_consumo_texto) || normalizarFecha(f.fecha_consumo)
+      const consumoNorm = f.fecha_consumo_norm !== undefined
+        ? f.fecha_consumo_norm
+        : normalizarFecha(f.fecha_consumo_texto) || normalizarFecha(f.fecha_consumo)
       const consumoKey = consumoNorm || f.fecha_consumo_texto || ''
-      const key = `${PROVEEDOR_FIJO}|${entregaNorm}|${f.sap}|${consumoKey}`
+      const key = `${PROVEEDOR_FIJO}|${fechaEntregaMostrada}|${f.sap}|${consumoKey}`
       if (!grupos.has(key)) {
         grupos.set(key, {
           oc: f.oc,
@@ -208,9 +211,9 @@ function computeRowSpans(filas, getValue) {
 // ya no sale del Excel: es editable acá, sugerida en mañana por defecto, y
 // vive en un useState local (no se persiste; al recargar vuelve a mañana).
 export function ResumenOC({ datos }) {
-  const filas = buildResumenOC(datos)
   const [fechaEntrega, setFechaEntrega] = useState(mañanaLocalISO)
   const [editandoFecha, setEditandoFecha] = useState(false)
+  const filas = buildResumenOC(datos, fechaEntrega)
 
   if (!filas.length) return null
 
