@@ -3185,7 +3185,8 @@ button.nav-card {
 /* Rutero */
 .wp-rut-head { display: flex; align-items: stretch; border: 1px solid #000; margin-bottom: 6px; }
 .wp-rut-head-logo { width: 130px; padding: 10px; border-right: 1px solid #000; display: flex; align-items: center; justify-content: center; }
-.wp-rut-head-title { flex: 1; padding: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; letter-spacing: 2px; border-right: 1px solid #000; }
+.wp-rut-head-title { flex: 1; padding: 6px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; letter-spacing: 2px; border-right: 1px solid #000; }
+.wp-rut-head-contenido { max-width: 100%; margin-top: 3px; font-size: 9.5pt; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; text-align: center; line-height: 1.2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .wp-rut-head-code { width: 180px; font-size: 8pt; }
 .wp-code-row { display: flex; border-bottom: 1px solid #000; }
 .wp-code-row:last-child { border-bottom: none; }

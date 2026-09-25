@@ -2,7 +2,7 @@
 
 import { createPortal } from 'react-dom'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { canastillasDe, fmtN, fmtP } from '../lib/logisticaWizardCalc'
+import { canastillasDe, fmtN, fmtP, nombreContenidoRutero } from '../lib/logisticaWizardCalc'
 import { fmtDateCorta, normalizarFecha } from '../lib/logisticaWizardExcel'
 import { filasNoAmPm, separarAmPmPorHorno } from '../lib/logisticaEmpaqueAmpm'
 import { RuteroPageAmPmSinHorno, RuteroPageAmPmConHorno } from './RuteroPageAmPm'
@@ -289,6 +289,8 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride
   const consolidada = Boolean(ruta.esConsolidada)
   const titulo = tituloOverride || `RUTERO SUMINISTRO ${lineaLabel.toUpperCase()}`
   const nombreRutaMostrar = nombreRutaOverride || ruta.nombre
+  // Qué lleva este rutero: solo sus columnas de REFERENCIA, en su orden.
+  const contenido = nombreContenidoRutero(productos.map(p => p.nombreCompleto || p.nombre))
   const anchos = anchosColumnasRutero(numProd)
 
   const pageRef = useRef(null)
@@ -321,7 +323,10 @@ export function RuteroPage({ ruta, filas, colegios, fechaEntrega, tituloOverride
       <div className="wp-rut-fit" ref={fitRef}>
       <div className="wp-rut-head">
         <div className="wp-rut-head-logo"><div className="wp-logo-box">ALINNOVA</div></div>
-        <div className="wp-rut-head-title">{titulo}</div>
+        <div className="wp-rut-head-title">
+          <div>{titulo}</div>
+          {contenido && <div className="wp-rut-head-contenido">{contenido}</div>}
+        </div>
         <div className="wp-rut-head-code">
           <div className="wp-code-row"><div className="wp-code-lbl">CÓDIGO</div><div className="wp-code-val">RF-FO-002-PD</div></div>
           <div className="wp-code-row"><div className="wp-code-lbl">VERSIÓN</div><div className="wp-code-val">1</div></div>
