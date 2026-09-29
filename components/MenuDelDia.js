@@ -136,8 +136,8 @@ export default function MenuDelDia({ fecha, onStatus }) {
     )
   }
 
-  if (!cicloDia) {
-    return <div className="empty-state"><p>No hay información de ciclo para esta fecha</p></div>
+  if (!cicloDia || cicloDia.menu_numero == null) {
+    return <div className="empty-state"><p>⚠️ Sin menú asignado en el ciclo para esta fecha</p></div>
   }
 
   return (

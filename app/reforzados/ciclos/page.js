@@ -8,6 +8,7 @@ import CicloPreviewModal from '../../../components/CicloPreviewModal'
 import CicloDetalleModal from '../../../components/CicloDetalleModal'
 import { supabase } from '../../../lib/supabase'
 import { parseCicloExcel, readFileAsArrayBuffer } from '../../../lib/parseCicloExcel'
+import { formatFechaDisplay } from '../../../lib/cicloUtils'
 
 function sortCiclos(list) {
   return [...list].sort((a, b) => {
@@ -66,8 +67,18 @@ export default function CiclosPage() {
     try {
       const buffer = await readFileAsArrayBuffer(file)
       const data = parseCicloExcel(buffer)
-      const existingCiclo = ciclos.find(c => c.mes === data.mes && c.año === data.año) || null
-      setPreview({ data, archivoNombre: file.name, existingCiclo })
+      const [{ data: menus, error: menusError }, { data: existentes, error: existentesError }] = await Promise.all([
+        supabase.from('reforzados_menus').select('numero, bebida_uht, agua, proteico, postre, fruta').order('numero'),
+        supabase.from('reforzados_ciclo_dias').select('fecha').in('fecha', data.dias.map(d => d.fecha)),
+      ])
+      if (menusError || existentesError) throw new Error('No se pudieron cargar los menús de Data Maestra.')
+      setPreview({
+        data,
+        dias: data.dias,
+        menus: menus || [],
+        fechasExistentes: new Set((existentes || []).map(e => e.fecha)),
+        archivoNombre: file.name,
+      })
     } catch (err) {
       setErrorMsg(err.message || 'No se pudo leer el archivo Excel.')
     } finally {
@@ -80,36 +91,73 @@ export default function CiclosPage() {
     setPreview(null)
   }
 
+  // Cambiar el menú en la vista previa toma los componentes de ese menú en
+  // Data Maestra (el Excel ya no aplica para ese día).
+  function handleChangeMenu(fecha, numero) {
+    setPreview(p => {
+      const menu = p.menus.find(m => m.numero === numero)
+      const dias = p.dias.map(d => {
+        if (d.fecha !== fecha) return d
+        if (!menu) return { ...d, menu_numero: numero, editado: true }
+        return {
+          ...d,
+          menu_numero: numero,
+          bebida_uht: menu.bebida_uht,
+          agua: menu.agua,
+          proteico: menu.proteico,
+          postre: menu.postre,
+          fruta: menu.fruta,
+          editado: true,
+        }
+      })
+      return { ...p, dias }
+    })
+  }
+
+  // Devuelve el id del ciclo del mes, creándolo en espera si no existe. Un
+  // ciclo existente nunca se borra: la carga combina por fecha.
+  async function ensureCicloId({ mes, año, nombreMes }, archivoNombre) {
+    const existente = ciclos.find(c => c.mes === mes && c.año === año)
+    if (existente) {
+      const { error } = await supabase
+        .from('reforzados_ciclos')
+        .update({ archivo_nombre: archivoNombre, updated_at: new Date().toISOString() })
+        .eq('id', existente.id)
+      if (error) throw error
+      return existente.id
+    }
+    const { data: inserted, error } = await supabase
+      .from('reforzados_ciclos')
+      .insert([{ mes, año, nombre_mes: nombreMes, estado: 'espera', archivo_nombre: archivoNombre }])
+      .select('id')
+      .single()
+    if (error) throw error
+    return inserted.id
+  }
+
   async function handleConfirmUpload() {
     if (!preview) return
     setSaving(true)
     try {
-      const { data, archivoNombre, existingCiclo } = preview
-      let estado = 'espera'
+      const { data, dias, archivoNombre } = preview
 
-      if (existingCiclo) {
-        estado = existingCiclo.estado
-        const { error: deleteError } = await supabase.from('reforzados_ciclos').delete().eq('id', existingCiclo.id)
-        if (deleteError) throw deleteError
+      const cicloIdPorMes = new Map()
+      for (const m of data.meses) {
+        cicloIdPorMes.set(`${m.año}-${String(m.mes).padStart(2, '0')}`, await ensureCicloId(m, archivoNombre))
       }
 
-      const { data: inserted, error: insertError } = await supabase
-        .from('reforzados_ciclos')
-        .insert([{ mes: data.mes, año: data.año, nombre_mes: data.nombreMes, estado, archivo_nombre: archivoNombre }])
-        .select()
-        .single()
-      if (insertError) throw insertError
-
-      const diasRows = data.dias.map(d => ({ ...d, ciclo_id: inserted.id }))
-      const { error: diasError } = await supabase.from('reforzados_ciclo_dias').insert(diasRows)
-      if (diasError) {
-        await supabase.from('reforzados_ciclos').delete().eq('id', inserted.id)
-        throw diasError
-      }
+      // Upsert por fecha (UNIQUE reforzados_ciclo_dias.fecha): solo las
+      // fechas del archivo; las demás fechas del mes quedan intactas.
+      const diasRows = dias.map(({ editado, ...d }) => ({ ...d, ciclo_id: cicloIdPorMes.get(d.fecha.slice(0, 7)) }))
+      const { error: diasError } = await supabase
+        .from('reforzados_ciclo_dias')
+        .upsert(diasRows, { onConflict: 'fecha' })
+      if (diasError) throw diasError
 
       await fetchCiclos()
       setPreview(null)
-      setToast({ message: `Ciclo de ${data.nombreMes} guardado correctamente`, type: 'success' })
+      const fechasTexto = dias.map(d => formatFechaDisplay(d.fecha).slice(0, 5)).join(', ')
+      setToast({ message: `Se cargaron ${dias.length} fecha${dias.length === 1 ? '' : 's'}: ${fechasTexto}`, type: 'success' })
     } catch (err) {
       setErrorMsg('No se pudo guardar el ciclo.')
     } finally {
@@ -241,8 +289,11 @@ export default function CiclosPage() {
       {preview && (
         <CicloPreviewModal
           data={preview.data}
+          dias={preview.dias}
+          menus={preview.menus}
+          fechasExistentes={preview.fechasExistentes}
           archivoNombre={preview.archivoNombre}
-          existingCiclo={preview.existingCiclo}
+          onChangeMenu={handleChangeMenu}
           onCancel={closePreview}
           onConfirm={handleConfirmUpload}
           saving={saving}
