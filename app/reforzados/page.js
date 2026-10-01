@@ -7,7 +7,6 @@ import RegistroEntregasModal from '../../components/RegistroEntregasModal'
 
 const DATA_MAESTRA = [
   { href: '/reforzados/productos', icon: '📦', title: 'Productos', desc: 'Productos y embalaje', accent: 'accent-blue' },
-  { href: '/reforzados/menus', icon: '🍽️', title: 'Menús', desc: 'Menús', accent: 'accent-orange' },
   { href: '/reforzados/ciclos', icon: '📅', title: 'Ciclos', desc: 'Ciclos mensuales', accent: 'accent-purple' },
   { href: '/reforzados/sitios', icon: '📍', title: 'Sitios', desc: 'ID sitios entrega', accent: 'accent-green' },
   { href: '/reforzados/rutas', icon: '🚚', title: 'Rutas', desc: 'Rutas', accent: 'accent-yellow' },

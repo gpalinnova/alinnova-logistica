@@ -67,15 +67,14 @@ export default function CiclosPage() {
     try {
       const buffer = await readFileAsArrayBuffer(file)
       const data = parseCicloExcel(buffer)
-      const [{ data: menus, error: menusError }, { data: existentes, error: existentesError }] = await Promise.all([
-        supabase.from('reforzados_menus').select('numero, bebida_uht, agua, proteico, postre, fruta').order('numero'),
-        supabase.from('reforzados_ciclo_dias').select('fecha').in('fecha', data.dias.map(d => d.fecha)),
-      ])
-      if (menusError || existentesError) throw new Error('No se pudieron cargar los menús de Data Maestra.')
+      const { data: existentes, error: existentesError } = await supabase
+        .from('reforzados_ciclo_dias')
+        .select('fecha')
+        .in('fecha', data.dias.map(d => d.fecha))
+      if (existentesError) throw new Error('No se pudieron verificar las fechas ya cargadas.')
       setPreview({
         data,
         dias: data.dias,
-        menus: menus || [],
         fechasExistentes: new Set((existentes || []).map(e => e.fecha)),
         archivoNombre: file.name,
       })
@@ -89,29 +88,6 @@ export default function CiclosPage() {
   function closePreview() {
     if (saving) return
     setPreview(null)
-  }
-
-  // Cambiar el menú en la vista previa toma los componentes de ese menú en
-  // Data Maestra (el Excel ya no aplica para ese día).
-  function handleChangeMenu(fecha, numero) {
-    setPreview(p => {
-      const menu = p.menus.find(m => m.numero === numero)
-      const dias = p.dias.map(d => {
-        if (d.fecha !== fecha) return d
-        if (!menu) return { ...d, menu_numero: numero, editado: true }
-        return {
-          ...d,
-          menu_numero: numero,
-          bebida_uht: menu.bebida_uht,
-          agua: menu.agua,
-          proteico: menu.proteico,
-          postre: menu.postre,
-          fruta: menu.fruta,
-          editado: true,
-        }
-      })
-      return { ...p, dias }
-    })
   }
 
   // Devuelve el id del ciclo del mes, creándolo en espera si no existe. Un
@@ -148,7 +124,7 @@ export default function CiclosPage() {
 
       // Upsert por fecha (UNIQUE reforzados_ciclo_dias.fecha): solo las
       // fechas del archivo; las demás fechas del mes quedan intactas.
-      const diasRows = dias.map(({ editado, ...d }) => ({ ...d, ciclo_id: cicloIdPorMes.get(d.fecha.slice(0, 7)) }))
+      const diasRows = dias.map(d => ({ ...d, ciclo_id: cicloIdPorMes.get(d.fecha.slice(0, 7)) }))
       const { error: diasError } = await supabase
         .from('reforzados_ciclo_dias')
         .upsert(diasRows, { onConflict: 'fecha' })
@@ -290,10 +266,8 @@ export default function CiclosPage() {
         <CicloPreviewModal
           data={preview.data}
           dias={preview.dias}
-          menus={preview.menus}
           fechasExistentes={preview.fechasExistentes}
           archivoNombre={preview.archivoNombre}
-          onChangeMenu={handleChangeMenu}
           onCancel={closePreview}
           onConfirm={handleConfirmUpload}
           saving={saving}

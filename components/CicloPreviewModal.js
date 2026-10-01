@@ -4,44 +4,21 @@ import { useMemo } from 'react'
 import { formatFechaDisplay, titleCase } from '../lib/cicloUtils'
 import { COMPONENTES_CICLO } from '../lib/parseCicloExcel'
 
-const COMPONENTE_LABEL = {
-  bebida_uht: 'Bebida UHT',
-  agua: 'Agua',
-  proteico: 'Proteico',
-  postre: 'Postre',
-  fruta: 'Fruta',
-}
-
-function normalizar(texto) {
-  return (texto || '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toUpperCase()
-}
-
 function limpiarTexto(texto) {
   return (texto || '').replace(/\s+/g, ' ').trim()
 }
 
-// Advertencia (no bloqueante) de un día frente a los menús de Data Maestra.
-function advertenciaDia(dia, menusByNumero) {
+// Advertencia (no bloqueante) de un día sin menú en el Excel.
+function advertenciaDia(dia) {
   if (dia.festivo) return null
   if (dia.menu_numero == null) return 'Sin menú detectado'
-  const menu = menusByNumero.get(dia.menu_numero)
-  if (!menu) return `MENU ${dia.menu_numero} no existe en Data Maestra`
-  if (dia.editado) return null
-  const distintos = COMPONENTES_CICLO.filter(c => normalizar(dia[c]) !== normalizar(menu[c]))
-  if (distintos.length === 0) return null
-  return `Difiere de Data Maestra: ${distintos.map(c => COMPONENTE_LABEL[c]).join(', ')}`
+  return null
 }
 
-export default function CicloPreviewModal({ data, dias, menus, fechasExistentes, archivoNombre, onChangeMenu, onCancel, onConfirm, saving }) {
-  const menusByNumero = useMemo(() => new Map(menus.map(m => [m.numero, m])), [menus])
+export default function CicloPreviewModal({ data, dias, fechasExistentes, archivoNombre, onCancel, onConfirm, saving }) {
   const advertencias = useMemo(
-    () => new Map(dias.map(d => [d.fecha, advertenciaDia(d, menusByNumero)])),
-    [dias, menusByNumero]
+    () => new Map(dias.map(d => [d.fecha, advertenciaDia(d)])),
+    [dias]
   )
   const totalAdvertencias = [...advertencias.values()].filter(Boolean).length
   const sobrescritas = dias.filter(d => fechasExistentes.has(d.fecha)).length
@@ -78,7 +55,6 @@ export default function CicloPreviewModal({ data, dias, menus, fechasExistentes,
             <tbody>
               {dias.map(d => {
                 const advertencia = advertencias.get(d.fecha)
-                const menuInexistente = d.menu_numero != null && !menusByNumero.has(d.menu_numero)
                 return (
                   <tr key={d.fecha} className={d.festivo ? 'row-festivo' : ''}>
                     <td>
@@ -92,21 +68,7 @@ export default function CicloPreviewModal({ data, dias, menus, fechasExistentes,
                       <td colSpan={2}>FESTIVO</td>
                     ) : (
                       <>
-                        <td>
-                          <select
-                            value={d.menu_numero ?? ''}
-                            onChange={e => onChangeMenu(d.fecha, e.target.value === '' ? null : Number(e.target.value))}
-                            disabled={saving}
-                          >
-                            <option value="">Sin menú</option>
-                            {menuInexistente && (
-                              <option value={d.menu_numero}>MENU {d.menu_numero} (no existe)</option>
-                            )}
-                            {menus.map(m => (
-                              <option key={m.numero} value={m.numero}>MENU {m.numero}</option>
-                            ))}
-                          </select>
-                        </td>
+                        <td>{d.menu_numero != null ? `MENU ${d.menu_numero}` : 'Sin menú detectado'}</td>
                         <td>
                           {COMPONENTES_CICLO.map(c => limpiarTexto(d[c])).filter(Boolean).join(' · ') || '-'}
                           {advertencia && <div className="logistica-warning-text">⚠️ {advertencia}</div>}
