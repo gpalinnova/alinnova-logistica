@@ -47,3 +47,6 @@
 - Los nombres visibles al usuario van en español.
 - Los emojis en labels van al inicio del texto.
 - Reutilizar clases existentes de globals.css antes de crear nuevas.
+
+## Notas de datos
+- Reforzados ya no tiene Data Maestra de Menús (eliminada 2026-10-01, ver `Data/migracion_eliminar_menus_reforzados.sql`). Los menús vienen del Excel de Ciclos (hoja "COMPLEMENTOS REFORZADOS") y viven en `reforzados_ciclo_dias`. `reforzados_menus_backup` es un respaldo temporal; no usarlo en código.
