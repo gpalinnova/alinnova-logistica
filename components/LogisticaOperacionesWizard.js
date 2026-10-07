@@ -62,7 +62,7 @@ export default function LogisticaOperacionesWizard() {
   const [puntosConfirmados, setPuntosConfirmados] = useState(new Set())
   const [sugerenciasInfo, setSugerenciasInfo] = useState({})
 
-  const [config, setConfig] = useState({ nroInicio: 1, fechaEmision: '', fechaEntrega: '' })
+  const [config, setConfig] = useState({ nroInicio: 1, fechaEmision: '' })
   const [preview, setPreview] = useState(null)
   const [modalDirectorioAbierto, setModalDirectorioAbierto] = useState(false)
   const [descargaRuteros, setDescargaRuteros] = useState({ activo: false, actual: 0, total: 0 })
@@ -640,13 +640,17 @@ export default function LogisticaOperacionesWizard() {
   function updateRuta(id, patch) { setRutas(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r)) }
 
   function confirmConductores() {
+    const sinFecha = rutas.filter(r => !r.fechaDespacho)
+    if (sinFecha.length) {
+      window.alert(`Falta la fecha de despacho en: ${sinFecha.map(r => r.nombre).join(', ')}`)
+      return
+    }
     const sinDatos = rutas.filter(r => !r.conductor || !r.placa)
     if (sinDatos.length) {
       if (!window.confirm(`${sinDatos.length} ruta(s) sin conductor o placa. ¿Continuar de todas formas?`)) return
     }
     const hoy = new Date().toISOString().split('T')[0]
-    const firstOc = ocs.find(o => o.selected)
-    setConfig({ nroInicio: 1, fechaEmision: hoy, fechaEntrega: (firstOc && firstOc.fecha) || hoy })
+    setConfig({ nroInicio: 1, fechaEmision: hoy })
     setStep(7)
   }
 
@@ -673,7 +677,7 @@ export default function LogisticaOperacionesWizard() {
       ruta: r,
       filas: buildRutaData(r).filas,
       colegios,
-      fechaEntrega: r.fechaDespacho || config.fechaEntrega,
+      fechaEntrega: r.fechaDespacho,
     }))
     setDescargaRuterosMsg(null)
     setDescargaRuteros({ activo: true, actual: 0, total: items.length })
@@ -729,7 +733,7 @@ export default function LogisticaOperacionesWizard() {
     Object.entries(porProd).forEach(([sap, c]) => { totalCanastillas += canastillasDe(c, productosPorSap.get(sap)?.embalaje).total })
     const ocsOrigen = Array.from(new Set(filasGrupo.map(f => f.oc).filter(Boolean)))
     return {
-      fecha_despacho: ruta.fechaDespacho || config.fechaEntrega,
+      fecha_despacho: ruta.fechaDespacho,
       fecha_consumo: fechaConsumoDominante(filasGrupo),
       linea: lineaDespachoDeFilas(filasGrupo),
       nombre_ruta: ruta.nombre,
@@ -1220,10 +1224,6 @@ export default function LogisticaOperacionesWizard() {
                   <div className="form-group">
                     <label>Fecha de emisión</label>
                     <input type="date" value={config.fechaEmision} onChange={e => setConfig(c => ({ ...c, fechaEmision: e.target.value }))} />
-                  </div>
-                  <div className="form-group">
-                    <label>Fecha de entrega</label>
-                    <input type="date" value={config.fechaEntrega} onChange={e => setConfig(c => ({ ...c, fechaEntrega: e.target.value }))} />
                   </div>
                 </div>
               </div>

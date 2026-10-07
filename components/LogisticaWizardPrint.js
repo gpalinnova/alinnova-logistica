@@ -632,7 +632,8 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
         {datos.map(({ ruta, filas }) => {
           const rutaIdx = rutasIndex.get(ruta.id) || 0
           const remisiones = agruparRemisiones(filas)
-          const fechaRuta = ruta.fechaDespacho || config.fechaEntrega
+          // Fecha de despacho de la ruta (Paso 6): la usan el rutero y sus remisiones.
+          const fechaRuta = ruta.fechaDespacho
           const filasSinAmPm = filasNoAmPm(filas)
           const { conHorno, sinHorno } = separarAmPmPorHorno(filas, colegios)
           const mostrarNoAmPm = filasSinAmPm.length > 0 || (!sinHorno.length && !conHorno.length)
@@ -654,7 +655,7 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
                     filasCol={rem.filas}
                     nro={nro}
                     fechaEmision={config.fechaEmision}
-                    fechaEntrega={config.fechaEntrega}
+                    fechaEntrega={fechaRuta}
                     colegios={colegios}
                   />
                 )
