@@ -14,6 +14,11 @@ import { getRutaHabitual } from '../lib/logisticaAsignacionesQuery'
 import { sugerirParticion } from '../lib/logisticaSugerenciaRutas'
 import { descargarRuterosPdf } from '../lib/logisticaRuteroPdfDownload'
 import { filasNoAmPm, separarAmPmPorHorno } from '../lib/logisticaEmpaqueAmpm'
+import LogisticaDespachosGuardados from './LogisticaDespachosGuardados'
+import {
+  ESTADO_VERSION, lineaDeProductos, nombrePorDefecto, fmtHora, numerarRemisiones, completarNumeros,
+  claveRemision, cargarDespachoGuardado, guardarDespachoGuardado, firmaEstable,
+} from '../lib/logisticaDespachosGuardados'
 
 const STEP_LABELS = ['Cargar OC', 'Seleccionar OC', 'Productos', 'Zonas y rutas', 'Distribuir', 'Conductores', 'Generar']
 
@@ -68,6 +73,23 @@ export default function LogisticaOperacionesWizard() {
   const [descargaRuteros, setDescargaRuteros] = useState({ activo: false, actual: 0, total: 0 })
   const [descargaRuterosMsg, setDescargaRuterosMsg] = useState(null)
   const [despachoGuardadoMsg, setDespachoGuardadoMsg] = useState(null)
+
+  // Despacho guardado (logistica_despachos_guardados): id del registro, su
+  // nombre editable, la bitácora de novedades y la numeración de remisiones.
+  // numerosRemision solo se usa una vez fija la numeración (al imprimir,
+  // descargar o aplicar una novedad); antes se calcula al vuelo.
+  const [despachoId, setDespachoId] = useState(null)
+  const [despachoNombre, setDespachoNombre] = useState('')
+  const [despachoCreadoEn, setDespachoCreadoEn] = useState(null)
+  const [novedades, setNovedades] = useState([])
+  const [numerosRemision, setNumerosRemision] = useState({})
+  const [numeracionBloqueada, setNumeracionBloqueada] = useState(false)
+  const [guardadoEn, setGuardadoEn] = useState(null)
+  const [guardando, setGuardando] = useState(false)
+  const [abriendoId, setAbriendoId] = useState(null)
+  const despachoIdRef = useRef(null)
+  const cadenaGuardadoRef = useRef(Promise.resolve())
+  const ultimoGuardadoRef = useRef('')
 
   const fileInputRef = useRef(null)
 
@@ -148,6 +170,7 @@ export default function LogisticaOperacionesWizard() {
         cantidad: o.cantidad, filas: o.filas, selected: true,
       }))
 
+      limpiarDespachoGuardado()
       setFileName(file.name)
       setRawRows(rows)
       setOcs(ocsList)
@@ -170,7 +193,17 @@ export default function LogisticaOperacionesWizard() {
     setColegios({}); setLocalidades([]); setRutas([]); setColegiosAsignados({})
     setPuntosSugeridos(new Set()); setPuntosConfirmados(new Set()); setSugerenciasInfo({})
     setFilterLinea('todas')
+    limpiarDespachoGuardado()
     setStep(1)
+  }
+
+  // Desvincula el wizard del despacho guardado: lo que se arme después es un
+  // despacho nuevo y no sobrescribe el anterior.
+  function limpiarDespachoGuardado() {
+    despachoIdRef.current = null
+    ultimoGuardadoRef.current = ''
+    setDespachoId(null); setDespachoNombre(''); setDespachoCreadoEn(null); setNovedades([])
+    setNumerosRemision({}); setNumeracionBloqueada(false); setGuardadoEn(null)
   }
 
   // ============================== PASO 2 — SELECCIONAR OCs ==============================
@@ -649,13 +682,145 @@ export default function LogisticaOperacionesWizard() {
     if (sinDatos.length) {
       if (!window.confirm(`${sinDatos.length} ruta(s) sin conductor o placa. ¿Continuar de todas formas?`)) return
     }
-    const hoy = new Date().toISOString().split('T')[0]
-    setConfig({ nroInicio: 1, fechaEmision: hoy })
+    // Un despacho ya guardado conserva su número inicial y fecha de emisión.
+    if (!despachoIdRef.current) {
+      const hoy = new Date().toISOString().split('T')[0]
+      setConfig({ nroInicio: 1, fechaEmision: hoy })
+    }
     setStep(7)
   }
 
   // ============================== PASO 7 — GENERAR ==============================
   const rutasIndex = useMemo(() => new Map(rutas.map((r, i) => [r.id, i])), [rutas])
+
+  // Filas de cada ruta, en el orden de la lista de rutas (base de la
+  // numeración de remisiones).
+  const rutasConFilas = useMemo(
+    () => rutas.map(r => ({ ruta: r, filas: getFilasRuta(r) })),
+    [rutas, rawRows, ocs, productos, localidades, colegiosAsignados]
+  )
+
+  // Número de cada remisión (clave sitio|OC). Mientras no esté fija, sale
+  // del número inicial; una vez fija, se conservan los números y las
+  // remisiones nuevas toman el siguiente después del mayor.
+  const numerosEfectivos = useMemo(
+    () => numeracionBloqueada
+      ? completarNumeros(numerosRemision, rutasConFilas)
+      : numerarRemisiones(rutasConFilas, config.nroInicio),
+    [numeracionBloqueada, numerosRemision, rutasConFilas, config.nroInicio]
+  )
+
+  function bloquearNumeracion() {
+    if (numeracionBloqueada) return
+    setNumerosRemision(numerosEfectivos)
+    setNumeracionBloqueada(true)
+  }
+
+  // ============================== DESPACHO GUARDADO ==============================
+  const lineaDespacho = lineaDeProductos(productos)
+  const ocsDespacho = ocs.filter(o => o.selected).map(o => o.numero)
+
+  function construirEstado() {
+    return {
+      version: ESTADO_VERSION,
+      fileName,
+      rawRows,
+      ocs,
+      productos,
+      colegios,
+      localidades,
+      rutas,
+      colegiosAsignados,
+      puntosConfirmados: Array.from(puntosConfirmados),
+      config,
+      numerosRemision: numerosEfectivos,
+      numeracionBloqueada,
+      resumen: { ocs: ocsDespacho, numRutas: rutas.length, numNovedades: novedades.length },
+    }
+  }
+
+  // Los guardados se encadenan para que el primero (insert) termine y deje
+  // el id antes de que el siguiente haga update, sin duplicar el despacho.
+  function guardarDespacho({ manual = false, novedadesNuevas } = {}) {
+    const estado = construirEstado()
+    const nombre = despachoNombre.trim() || nombrePorDefecto(lineaDespacho, ocsDespacho, despachoCreadoEn || undefined)
+    const novs = novedadesNuevas || novedades
+    if (novedadesNuevas) estado.resumen.numNovedades = novedadesNuevas.length
+    const firma = firmaEstable([nombre, estado, novs])
+    if (!manual && firma === ultimoGuardadoRef.current) return cadenaGuardadoRef.current
+    ultimoGuardadoRef.current = firma
+    if (!despachoNombre.trim()) setDespachoNombre(nombre)
+    cadenaGuardadoRef.current = cadenaGuardadoRef.current.then(async () => {
+      setGuardando(true)
+      try {
+        const res = await guardarDespachoGuardado({
+          id: despachoIdRef.current, linea: lineaDespacho, nombre, estado, novedades: novs,
+        })
+        if (!despachoIdRef.current) {
+          despachoIdRef.current = res.id
+          setDespachoId(res.id)
+          setDespachoCreadoEn(res.updated_at)
+        }
+        setGuardadoEn(res.updated_at)
+      } catch (err) {
+        console.error('No se pudo guardar el despacho:', err)
+        ultimoGuardadoRef.current = ''
+        setDespachoGuardadoMsg({ tipo: 'error', texto: '⚠ No se pudo guardar el despacho. Intenta con "💾 Guardar despacho".' })
+      } finally {
+        setGuardando(false)
+      }
+    })
+    return cadenaGuardadoRef.current
+  }
+
+  // Autoguardado: al llegar al paso 7 la primera vez y, en un despacho ya
+  // guardado, ante cualquier cambio en los pasos 5, 6 o 7 (con espera de
+  // 1,5 s para no guardar en cada tecla).
+  useEffect(() => {
+    if (step === 7 && !despachoIdRef.current && rutas.length) { guardarDespacho(); return }
+    if (!despachoIdRef.current || step < 5) return
+    const t = setTimeout(() => { guardarDespacho() }, 1500)
+    return () => clearTimeout(t)
+  }, [step, rawRows, ocs, productos, colegios, localidades, rutas, colegiosAsignados, config, numerosEfectivos, numeracionBloqueada, despachoNombre])
+
+  async function abrirDespacho(id) {
+    if (abriendoId) return
+    setAbriendoId(id)
+    try {
+      const d = await cargarDespachoGuardado(id)
+      const e = d.estado || {}
+      setFileName(e.fileName || '')
+      setFileError('')
+      setRawRows(e.rawRows || [])
+      setOcs(e.ocs || [])
+      setProductos(e.productos || [])
+      setColegios(e.colegios || {})
+      setLocalidades(e.localidades || [])
+      setRutas(e.rutas || [])
+      setColegiosAsignados(e.colegiosAsignados || {})
+      setPuntosConfirmados(new Set(e.puntosConfirmados || []))
+      setPuntosSugeridos(new Set())
+      setSugerenciasInfo({})
+      setConfig(e.config || { nroInicio: 1, fechaEmision: new Date().toISOString().split('T')[0] })
+      setNumerosRemision(e.numerosRemision || {})
+      setNumeracionBloqueada(Boolean(e.numeracionBloqueada))
+      setNovedades(d.novedades || [])
+      setDespachoNombre(d.nombre || '')
+      setDespachoCreadoEn(d.created_at)
+      setGuardadoEn(d.updated_at)
+      despachoIdRef.current = d.id
+      setDespachoId(d.id)
+      // El autoguardado que dispara la carga no encuentra cambios y no
+      // reescribe el registro.
+      ultimoGuardadoRef.current = firmaEstable([d.nombre, d.estado, d.novedades || []])
+      setStep(7)
+    } catch (err) {
+      console.error('No se pudo abrir el despacho:', err)
+      setFileError('No se pudo abrir el despacho guardado.')
+    } finally {
+      setAbriendoId(null)
+    }
+  }
 
   function buildRutaData(r) {
     const filas = getFilasRuta(r).map(f => ({ ...f, producto: productosPorSap.get(f.sap) }))
@@ -808,6 +973,26 @@ export default function LogisticaOperacionesWizard() {
 
           {maestraError && <div className="form-error-banner">{maestraError}</div>}
 
+          {(step === 6 || step === 7) && rutas.length > 0 && (
+            <div className="wizard-config-card" style={{ marginBottom: 16 }}>
+              <div className="wizard-config-row" style={{ alignItems: 'flex-end' }}>
+                <div className="form-group" style={{ flex: 1, minWidth: 260 }}>
+                  <label>Nombre del despacho</label>
+                  <input
+                    type="text"
+                    value={despachoNombre}
+                    placeholder={nombrePorDefecto(lineaDespacho, ocsDespacho, despachoCreadoEn || undefined)}
+                    onChange={e => setDespachoNombre(e.target.value)}
+                  />
+                </div>
+                <button className="btn-primary" disabled={guardando} onClick={() => guardarDespacho({ manual: true })}>
+                  {guardando ? 'Guardando...' : '💾 Guardar despacho'}
+                </button>
+                {guardadoEn && !guardando && <span className="logistica-muted" style={{ paddingBottom: 8 }}>Guardado {fmtHora(guardadoEn)}</span>}
+              </div>
+            </div>
+          )}
+
           {step === 1 && (
             <div>
               <h3>Archivo de Detalle de Entrega del cliente</h3>
@@ -834,6 +1019,7 @@ export default function LogisticaOperacionesWizard() {
                 Los datos de productos (embalaje, precio) y del directorio de colegios se leen de Supabase.
                 <Link href="/logistica/data-maestra/productos" target="_blank" rel="noopener noreferrer" style={{ marginLeft: 12 }}>⚙ Editar productos maestros</Link>
               </div>
+              <LogisticaDespachosGuardados onAbrir={abrirDespacho} abriendoId={abriendoId} />
             </div>
           )}
 
@@ -1219,7 +1405,8 @@ export default function LogisticaOperacionesWizard() {
                 <div className="wizard-config-row">
                   <div className="form-group">
                     <label>Número inicial de remisión</label>
-                    <input type="number" min="1" value={config.nroInicio} onChange={e => setConfig(c => ({ ...c, nroInicio: e.target.value }))} />
+                    <input type="number" min="1" value={config.nroInicio} disabled={numeracionBloqueada} onChange={e => setConfig(c => ({ ...c, nroInicio: e.target.value }))} />
+                    {numeracionBloqueada && <div className="wizard-sugerida-hint">🔒 Numeración fija desde la primera impresión</div>}
                   </div>
                   <div className="form-group">
                     <label>Fecha de emisión</label>
@@ -1291,7 +1478,8 @@ export default function LogisticaOperacionesWizard() {
           colegios={colegios}
           config={config}
           rutasIndex={rutasIndex}
-          onBeforePrint={() => guardarDespachos(preview.datos)}
+          numerosRemision={numerosEfectivos}
+          onBeforePrint={() => { bloquearNumeracion(); return guardarDespachos(preview.datos) }}
           onClose={() => setPreview(null)}
         />
       )}

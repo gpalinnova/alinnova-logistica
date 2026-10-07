@@ -596,7 +596,9 @@ function RemisionPage({ ruta, punto, oc, filasCol, nro, fechaEmision, fechaEntre
 
 // datos: [{ ruta, filas }] — filas ya incluyen .producto resuelto
 // rutasIndex: Map ruta.id -> índice en la lista completa de rutas (numeración de remisión)
-export default function LogisticaWizardPrint({ titulo, datos, colegios, config, rutasIndex, onBeforePrint, onClose }) {
+// numerosRemision: { "punto|oc": nro } — numeración del despacho (fija una
+// vez impreso); si falta una clave se usa la regla de siempre.
+export default function LogisticaWizardPrint({ titulo, datos, colegios, config, rutasIndex, numerosRemision, onBeforePrint, onClose }) {
   const [mounted, setMounted] = useState(false)
   const [imprimiendo, setImprimiendo] = useState(false)
   useEffect(() => { setMounted(true) }, [])
@@ -645,7 +647,7 @@ export default function LogisticaWizardPrint({ titulo, datos, colegios, config, 
               {mostrarSinHorno && <RuteroPageAmPmSinHorno ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={fechaRuta} />}
               {mostrarConHorno && <RuteroPageAmPmConHorno ruta={ruta} filas={filas} colegios={colegios} fechaEntrega={fechaRuta} />}
               {remisiones.map((rem, idx) => {
-                const nro = nroInicio + idx + rutaIdx * 100
+                const nro = numerosRemision?.[`${rem.punto}|${rem.oc || ''}`] ?? (nroInicio + idx + rutaIdx * 100)
                 return (
                   <RemisionPage
                     key={`${rem.punto}|${rem.oc}`}
