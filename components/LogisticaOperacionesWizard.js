@@ -15,6 +15,7 @@ import { sugerirParticion } from '../lib/logisticaSugerenciaRutas'
 import { descargarRuterosPdf } from '../lib/logisticaRuteroPdfDownload'
 import { filasNoAmPm, separarAmPmPorHorno } from '../lib/logisticaEmpaqueAmpm'
 import LogisticaDespachosGuardados from './LogisticaDespachosGuardados'
+import LogisticaNovedadesPanel from './LogisticaNovedadesPanel'
 import {
   ESTADO_VERSION, lineaDeProductos, nombrePorDefecto, fmtHora, numerarRemisiones, completarNumeros,
   claveRemision, cargarDespachoGuardado, guardarDespachoGuardado, firmaEstable,
@@ -31,6 +32,25 @@ function matchesFilter(p, filtro) {
   if (filtro === 'todas') return true
   if (filtro === 'sin_clasificar') return !p.maestraOk
   return p.linea === filtro
+}
+
+// Producto del paso 3 armado desde la Data Maestra (mismos campos que
+// buildProductos), para líneas nuevas creadas por una adición.
+function productoDesdeMaestra(m) {
+  return {
+    sap: String(m.codigo_articulo),
+    nombre: m.nombre_corto || m.nombre,
+    nombreCompleto: m.nombre,
+    cantidad: 0,
+    embalaje: m.capacidad_canastilla || 0,
+    canastillas: 0,
+    sueltas: 0,
+    linea: m.modalidad,
+    precio: m.valor_unitario || 0,
+    colegios: 0,
+    selected: true,
+    maestraOk: true,
+  }
 }
 
 function LineaPill({ linea }) {
@@ -87,6 +107,13 @@ export default function LogisticaOperacionesWizard() {
   const [guardadoEn, setGuardadoEn] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [abriendoId, setAbriendoId] = useState(null)
+  // Novedades: colegios agregados por una adición quedan en la ruta que
+  // escogió el usuario (rutaForzada) y las rutas que cambiaron se marcan
+  // para reimprimir hasta que se abra su "Ver / Imprimir".
+  const [rutaForzada, setRutaForzada] = useState({})
+  const [rutasModificadas, setRutasModificadas] = useState([])
+  const [panelNovedades, setPanelNovedades] = useState(false)
+  const guardarYaRef = useRef(false)
   const despachoIdRef = useRef(null)
   const cadenaGuardadoRef = useRef(Promise.resolve())
   const ultimoGuardadoRef = useRef('')
@@ -204,6 +231,7 @@ export default function LogisticaOperacionesWizard() {
     ultimoGuardadoRef.current = ''
     setDespachoId(null); setDespachoNombre(''); setDespachoCreadoEn(null); setNovedades([])
     setNumerosRemision({}); setNumeracionBloqueada(false); setGuardadoEn(null)
+    setRutaForzada({}); setRutasModificadas([]); setPanelNovedades(false)
   }
 
   // ============================== PASO 2 — SELECCIONAR OCs ==============================
@@ -646,6 +674,7 @@ export default function LogisticaOperacionesWizard() {
 
   // ============================== PASO 6 — CONDUCTORES ==============================
   function esRutaDelPunto(r, punto, localidad) {
+    if (rutaForzada[punto]) return rutaForzada[punto] === r.id
     if (!r.localidades.includes(localidad)) return false
     const loc = localidades.find(l => l.nombre === localidad)
     if (!loc) return false
@@ -653,10 +682,17 @@ export default function LogisticaOperacionesWizard() {
     return colegiosAsignados[punto] === r.id
   }
 
-  function getFilasRuta(r) {
+  // Las líneas que una novedad dejó en 0 no salen en el rutero ni en la
+  // remisión; getFilasRutaConCeros las conserva para listar las remisiones
+  // anuladas.
+  function getFilasRutaConCeros(r) {
     const ocsSet = new Set(ocs.filter(o => o.selected).map(o => o.numero))
     const prodSet = new Set(productos.filter(p => p.selected).map(p => p.sap))
     return rawRows.filter(x => ocsSet.has(x.oc) && prodSet.has(x.sap) && esRutaDelPunto(r, x.punto, x.localidad))
+  }
+
+  function getFilasRuta(r) {
+    return getFilasRutaConCeros(r).filter(x => x.cantidad > 0)
   }
 
   function getStatsRuta(r) {
@@ -697,7 +733,7 @@ export default function LogisticaOperacionesWizard() {
   // numeración de remisiones).
   const rutasConFilas = useMemo(
     () => rutas.map(r => ({ ruta: r, filas: getFilasRuta(r) })),
-    [rutas, rawRows, ocs, productos, localidades, colegiosAsignados]
+    [rutas, rawRows, ocs, productos, localidades, colegiosAsignados, rutaForzada]
   )
 
   // Número de cada remisión (clave sitio|OC). Mientras no esté fija, sale
@@ -735,6 +771,8 @@ export default function LogisticaOperacionesWizard() {
       config,
       numerosRemision: numerosEfectivos,
       numeracionBloqueada,
+      rutaForzada,
+      rutasModificadas,
       resumen: { ocs: ocsDespacho, numRutas: rutas.length, numNovedades: novedades.length },
     }
   }
@@ -777,11 +815,12 @@ export default function LogisticaOperacionesWizard() {
   // guardado, ante cualquier cambio en los pasos 5, 6 o 7 (con espera de
   // 1,5 s para no guardar en cada tecla).
   useEffect(() => {
+    if (guardarYaRef.current) { guardarYaRef.current = false; guardarDespacho({ manual: true }); return }
     if (step === 7 && !despachoIdRef.current && rutas.length) { guardarDespacho(); return }
     if (!despachoIdRef.current || step < 5) return
     const t = setTimeout(() => { guardarDespacho() }, 1500)
     return () => clearTimeout(t)
-  }, [step, rawRows, ocs, productos, colegios, localidades, rutas, colegiosAsignados, config, numerosEfectivos, numeracionBloqueada, despachoNombre])
+  }, [step, rawRows, ocs, productos, colegios, localidades, rutas, colegiosAsignados, config, numerosEfectivos, numeracionBloqueada, despachoNombre, rutaForzada, rutasModificadas, novedades])
 
   async function abrirDespacho(id) {
     if (abriendoId) return
@@ -804,6 +843,8 @@ export default function LogisticaOperacionesWizard() {
       setConfig(e.config || { nroInicio: 1, fechaEmision: new Date().toISOString().split('T')[0] })
       setNumerosRemision(e.numerosRemision || {})
       setNumeracionBloqueada(Boolean(e.numeracionBloqueada))
+      setRutaForzada(e.rutaForzada || {})
+      setRutasModificadas(e.rutasModificadas || [])
       setNovedades(d.novedades || [])
       setDespachoNombre(d.nombre || '')
       setDespachoCreadoEn(d.created_at)
@@ -822,6 +863,116 @@ export default function LogisticaOperacionesWizard() {
     }
   }
 
+  // ============================== NOVEDADES ==============================
+  // Líneas del despacho para el panel de novedades: idx = posición en
+  // rawRows (estable: las novedades solo cambian cantidades o agregan al
+  // final), con la ruta a la que pertenece cada una.
+  const lineasDespacho = useMemo(() => {
+    const ocsSet = new Set(ocs.filter(o => o.selected).map(o => o.numero))
+    const prodSet = new Set(productos.filter(p => p.selected).map(p => p.sap))
+    const out = []
+    rawRows.forEach((row, idx) => {
+      if (!ocsSet.has(row.oc) || !prodSet.has(row.sap)) return
+      const ruta = rutas.find(r => esRutaDelPunto(r, row.punto, row.localidad))
+      out.push({ ...row, idx, rutaId: ruta ? ruta.id : null })
+    })
+    return out
+  }, [rawRows, ocs, productos, rutas, localidades, colegiosAsignados, rutaForzada])
+
+  // filas: detalle ya validado por el panel ({ lineaIdx | crear, despues, rutaId, ... }).
+  // puntosNuevos: colegios que no estaban en el despacho, con su ruta.
+  function aplicarNovedades(tipo, filas, puntosNuevos) {
+    bloquearNumeracion()
+    const nuevasRows = rawRows.slice()
+    const productosNuevos = [...productos]
+    const sapsProductos = new Set(productos.map(p => p.sap))
+    const ocsNuevas = [...ocs]
+    const numerosOc = new Set(ocs.map(o => o.numero))
+    const colegiosNuevos = { ...colegios }
+    const forzadaNueva = { ...rutaForzada }
+    const modificadas = new Set(rutasModificadas)
+
+    Object.entries(puntosNuevos || {}).forEach(([punto, pn]) => {
+      colegiosNuevos[punto] = {
+        punto,
+        nombre: pn.nombre.trim(),
+        sitioEntrega: (pn.sitioEntrega || pn.nombre).trim(),
+        localidad: pn.localidad || 'SIN LOCALIDAD',
+        direccion: pn.direccion || null,
+        sedeEducativa: pn.sedeEducativa || null,
+        enDirectorio: Boolean(pn.enDirectorio),
+        tiene_horno: Boolean(pn.tiene_horno),
+      }
+      forzadaNueva[punto] = pn.rutaId
+    })
+
+    const creadasPorClave = new Map()
+    filas.forEach(f => {
+      if (f.rutaId) modificadas.add(f.rutaId)
+      if (f.lineaIdx != null) {
+        nuevasRows[f.lineaIdx] = { ...nuevasRows[f.lineaIdx], cantidad: f.despues }
+        return
+      }
+      const c = f.crear
+      const clave = `${c.punto}|${c.preorden}|${c.sap}`
+      if (creadasPorClave.has(clave)) {
+        const i = creadasPorClave.get(clave)
+        nuevasRows[i] = { ...nuevasRows[i], cantidad: f.despues }
+        return
+      }
+      const m = productosMaestra.get(c.sap)
+      const mismaPreorden = rawRows.find(r => String(r.preorden || '').trim() === c.preorden)
+      const mismoPunto = rawRows.find(r => r.punto === c.punto)
+      const col = colegiosNuevos[c.punto]
+      nuevasRows.push({
+        punto: c.punto,
+        fecha_entrega: mismaPreorden?.fecha_entrega ?? mismoPunto?.fecha_entrega ?? null,
+        fecha_consumo: mismaPreorden?.fecha_consumo ?? null,
+        fecha_consumo_texto: mismaPreorden?.fecha_consumo_texto ?? '',
+        fecha_consumo_norm: mismaPreorden?.fecha_consumo_norm ?? null,
+        oc: c.oc,
+        bodega: mismoPunto?.bodega || col?.nombre || '',
+        sap: c.sap,
+        nombre: m?.nombre || c.sap,
+        cantidad: f.despues,
+        localidad: mismoPunto?.localidad || col?.localidad || 'SIN LOCALIDAD',
+        preorden: c.preorden,
+      })
+      creadasPorClave.set(clave, nuevasRows.length - 1)
+      if (!sapsProductos.has(c.sap) && m) {
+        productosNuevos.push(productoDesdeMaestra(m))
+        sapsProductos.add(c.sap)
+      }
+      if (!numerosOc.has(c.oc)) {
+        ocsNuevas.push({
+          numero: c.oc, fecha: mismaPreorden?.fecha_entrega || null, colegios: 1,
+          lineas: [m ? m.modalidad : 'sin_clasificar'], cantidad: f.despues, filas: 1, selected: true,
+        })
+        numerosOc.add(c.oc)
+      }
+    })
+
+    const entrada = {
+      fecha: new Date().toISOString(),
+      tipo,
+      filas: filas.map(f => ({
+        punto: f.punto, colegio: f.colegio, preorden: f.preorden, producto: f.producto,
+        antes: f.antes, cambio: f.cambio, despues: f.despues, ruta: f.ruta,
+      })),
+    }
+
+    setRawRows(nuevasRows)
+    setProductos(productosNuevos)
+    setOcs(ocsNuevas)
+    setColegios(colegiosNuevos)
+    setRutaForzada(forzadaNueva)
+    setRutasModificadas(Array.from(modificadas))
+    setNovedades(prev => [...prev, entrada])
+    // El autoguardado corre tras el render con el estado ya actualizado.
+    guardarYaRef.current = true
+    setDespachoGuardadoMsg({ tipo: 'success', texto: `✅ ${tipo === 'cancelacion' ? 'Cancelación' : 'Adición'} aplicada (${filas.length} fila(s))` })
+  }
+
   function buildRutaData(r) {
     const filas = getFilasRuta(r).map(f => ({ ...f, producto: productosPorSap.get(f.sap) }))
     return { ruta: r, filas }
@@ -830,9 +981,11 @@ export default function LogisticaOperacionesWizard() {
   function verRuta(id) {
     const r = rutas.find(x => x.id === id)
     if (!r) return
+    setRutasModificadas(prev => prev.filter(x => x !== id))
     setPreview({ titulo: `Ruta: ${r.nombre}`, datos: [buildRutaData(r)] })
   }
   function verTodasRutas() {
+    setRutasModificadas([])
     setPreview({ titulo: `Todas las rutas (${rutas.length})`, datos: rutas.map(buildRutaData) })
   }
 
@@ -1420,8 +1573,21 @@ export default function LogisticaOperacionesWizard() {
                 const stats = getStatsRuta(r)
                 const filas = getFilasRuta(r)
                 const remisionesCount = agruparRemisiones(filas).length
+                // Remisión con todas sus líneas en 0: ANULADA, conserva su número y no se imprime.
+                const anuladas = agruparRemisiones(getFilasRutaConCeros(r))
+                  .filter(rem => rem.filas.every(f => !f.cantidad))
+                  .map(rem => numerosEfectivos[claveRemision(rem.punto, rem.oc)])
+                  .filter(n => n != null)
+                  .sort((a, b) => a - b)
+                const modificada = rutasModificadas.includes(r.id)
                 return (
                   <div key={r.id} className="wizard-ruta-card">
+                    {modificada && <div className="logistica-warning-box" style={{ margin: '0 0 8px' }}>⚠️ Modificada – reimprimir</div>}
+                    {anuladas.length > 0 && (
+                      <div className="logistica-muted" style={{ marginBottom: 6 }}>
+                        {anuladas.map(n => <span key={n} className="badge badge-inactivo" style={{ marginRight: 6 }}>Nro {n} – ANULADA</span>)}
+                      </div>
+                    )}
                     <div className="wizard-ruta-card-head">
                       <div className="wizard-ruta-nombre-static">{r.nombre}</div>
                       <div className="wizard-ruta-locs">
@@ -1451,6 +1617,7 @@ export default function LogisticaOperacionesWizard() {
               <div className="page-toolbar spread">
                 <button className="btn-secondary" onClick={() => setStep(6)}>← Conductores</button>
                 <div style={{ display: 'flex', gap: 10 }}>
+                  {despachoId && <button className="btn-secondary" onClick={() => setPanelNovedades(true)}>📝 Aplicar novedades</button>}
                   <button className="btn-secondary" onClick={reiniciarTodo}>↻ Nueva OC</button>
                   <button className="btn-secondary" disabled={descargaRuteros.activo} onClick={handleDescargarRuteros}>
                     {descargaRuteros.activo ? `Generando ${descargaRuteros.actual} de ${descargaRuteros.total}...` : '⬇ Descargar ruteros'}
@@ -1481,6 +1648,21 @@ export default function LogisticaOperacionesWizard() {
           numerosRemision={numerosEfectivos}
           onBeforePrint={() => { bloquearNumeracion(); return guardarDespachos(preview.datos) }}
           onClose={() => setPreview(null)}
+        />
+      )}
+
+      {panelNovedades && (
+        <LogisticaNovedadesPanel
+          lineas={lineasDespacho}
+          colegios={colegios}
+          rutas={rutas}
+          directorio={directorio}
+          productosMaestra={productosMaestra}
+          productosDespacho={productos}
+          ocs={ocs}
+          novedades={novedades}
+          onAplicar={aplicarNovedades}
+          onClose={() => setPanelNovedades(false)}
         />
       )}
 
