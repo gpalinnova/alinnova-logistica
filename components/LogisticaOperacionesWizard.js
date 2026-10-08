@@ -8,6 +8,9 @@ import LogisticaDirectorioModal from './LogisticaDirectorioModal'
 import { supabase } from '../lib/supabase'
 import { readFileAsArrayBuffer } from '../lib/parseRutasExcel'
 import { parsearExcelWizard } from '../lib/logisticaWizardExcel'
+import {
+  normPunto, indexarDirectorio, indexarDirectorioPorNombre, indexarLocalidades, buscarSitio, localidadDelPunto,
+} from '../lib/logisticaDirectorioCruce'
 import { canastillasDe, fmtN } from '../lib/logisticaWizardCalc'
 import { esRefrigerioReforzado } from '../lib/logisticaOcImport'
 import { getRutaHabitual } from '../lib/logisticaAsignacionesQuery'
@@ -140,7 +143,7 @@ export default function LogisticaOperacionesWizard() {
         setMaestraError('No se pudo cargar la data maestra de Productos o el Directorio de colegios desde Supabase.')
       } else {
         setProductosMaestra(new Map((prodData || []).map(p => [String(p.codigo_articulo), p])))
-        setDirectorio(new Map((sitiosData || []).map(s => [String(s.punto_wms), s])))
+        setDirectorio(indexarDirectorio(sitiosData))
         setGruposRuteo(new Map((gruposData || []).map(g => [g.codigo, g])))
         setSubzonas(new Map((subzonasData || []).map(s => [s.codigo, s])))
       }
@@ -150,6 +153,17 @@ export default function LogisticaOperacionesWizard() {
   }, [])
 
   const productosPorSap = useMemo(() => new Map(productos.map(p => [p.sap, p])), [productos])
+
+  // Cruce OC ↔ directorio: por punto WMS normalizado y, de respaldo, por
+  // nombre normalizado. La localidad de cada fila sale del directorio.
+  const directorioPorNombre = useMemo(() => indexarDirectorioPorNombre(directorio), [directorio])
+  const localidadesCanonicas = useMemo(() => indexarLocalidades(directorio), [directorio])
+  function sitioDe(punto, nombre) {
+    return buscarSitio(directorio, directorioPorNombre, punto, nombre)
+  }
+  function conLocalidadDelDirectorio(rows) {
+    return rows.map(r => ({ ...r, localidad: localidadDelPunto(sitioDe(r.punto, r.bodega), r.localidad, localidadesCanonicas) }))
+  }
 
   // El wizard de Logística es solo Panadería/AM-PM/Gastronomía: los renglones
   // de Reforzados (identificados por nombre, igual que en el flujo de
@@ -174,7 +188,7 @@ export default function LogisticaOperacionesWizard() {
     setFileError('')
     try {
       const buffer = await readFileAsArrayBuffer(file)
-      const rows = parsearExcelWizard(buffer)
+      const rows = conLocalidadDelDirectorio(parsearExcelWizard(buffer))
       const rowsUtiles = excluirReforzados(rows)
 
       if (!rowsUtiles.length) {
@@ -252,12 +266,12 @@ export default function LogisticaOperacionesWizard() {
     const colegiosNuevos = {}
     rows.forEach(r => {
       if (!colegiosNuevos[r.punto]) {
-        const dir = directorio.get(r.punto)
+        const dir = sitioDe(r.punto, r.bodega)
         colegiosNuevos[r.punto] = {
           punto: r.punto,
           nombre: r.bodega,
           sitioEntrega: r.bodega,
-          localidad: r.localidad,
+          localidad: localidadDelPunto(dir, r.localidad, localidadesCanonicas),
           direccion: dir ? dir.direccion : null,
           sedeEducativa: dir ? dir.sede_educativa : null,
           enDirectorio: Boolean(dir),
@@ -315,9 +329,10 @@ export default function LogisticaOperacionesWizard() {
   // Al guardar el modal: los colegios recién insertados en logistica_sitios se
   // aplican tanto al directorio (para que futuras OCs los encuentren) como a
   // los colegios de la OC actual, para que el flujo siga como si siempre
-  // hubieran estado en el directorio.
+  // hubieran estado en el directorio. El nombre que se imprime sigue siendo
+  // el de la OC; del directorio salen localidad, dirección y sede.
   function handleDirectorioGuardado(rowsInsertadas) {
-    const porPunto = new Map(rowsInsertadas.map(r => [String(r.punto_wms), r]))
+    const porPunto = new Map(rowsInsertadas.map(r => [normPunto(r.punto_wms), r]))
 
     setDirectorio(prev => {
       const next = new Map(prev)
@@ -325,15 +340,20 @@ export default function LogisticaOperacionesWizard() {
       return next
     })
 
+    // Las filas de la OC (paso 4, rutero y remisión) toman la localidad recién registrada.
+    setRawRows(prev => prev.map(r => {
+      const sitio = porPunto.get(normPunto(r.punto))
+      return sitio ? { ...r, localidad: localidadDelPunto(sitio, r.localidad, localidadesCanonicas) } : r
+    }))
+
     setColegios(prev => {
       const next = { ...prev }
-      porPunto.forEach((sitio, punto) => {
-        if (!next[punto]) return
+      Object.keys(next).forEach(punto => {
+        const sitio = porPunto.get(normPunto(punto))
+        if (!sitio) return
         next[punto] = {
           ...next[punto],
-          nombre: sitio.nombre_institucion,
-          sitioEntrega: sitio.nombre_sitio || sitio.nombre_institucion,
-          localidad: sitio.localidad,
+          localidad: localidadDelPunto(sitio, next[punto].localidad, localidadesCanonicas),
           direccion: sitio.direccion,
           sedeEducativa: sitio.sede_educativa,
           enDirectorio: true,
@@ -363,7 +383,9 @@ export default function LogisticaOperacionesWizard() {
     const filas = rawRows.filter(r => ocsSet.has(r.oc) && prodSet.has(r.sap))
 
     const locMap = new Map()
+    const nombrePorPunto = new Map()
     filas.forEach(r => {
+      if (!nombrePorPunto.has(r.punto)) nombrePorPunto.set(r.punto, r.bodega)
       const loc = r.localidad || 'SIN LOCALIDAD'
       if (!locMap.has(loc)) locMap.set(loc, { nombre: loc, ptos: new Set(), cantidad: 0, porProducto: {} })
       const l = locMap.get(loc)
@@ -381,7 +403,7 @@ export default function LogisticaOperacionesWizard() {
       const esSinLocalidad = l.nombre === 'SIN LOCALIDAD'
       const sitiosDeLocalidad = Array.from(l.ptos).map(punto => ({
         punto,
-        subzona_codigo: directorio.get(punto)?.subzona_codigo || null,
+        subzona_codigo: sitioDe(punto, nombrePorPunto.get(punto))?.subzona_codigo || null,
       }))
       const sugerencia = esSinLocalidad
         ? { grupoCodigo: null, numRutasSugerido: 1, asignacionPorPunto: {}, destinoFijo: null, carroDedicado: false, maxSitiosTramo: null, sitiosSinSubzona: [] }

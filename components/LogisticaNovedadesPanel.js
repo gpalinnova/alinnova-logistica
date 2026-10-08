@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useRef, useState } from 'react'
 import { fmtN } from '../lib/logisticaWizardCalc'
 import { fmtFechaHora } from '../lib/logisticaDespachosGuardados'
+import { normPunto } from '../lib/logisticaDirectorioCruce'
 
 // Panel de novedades de un despacho guardado (cancelaciones y adiciones que
 // Compensar manda después de la OC). Cada línea del despacho se identifica
@@ -143,7 +144,7 @@ export default function LogisticaNovedadesPanel({
     setValores({})
     setNuevoProd({ preorden: '', sap: '', oc: '', cantidad: '' })
     if (!colegios[p] && !puntosNuevos[p]) {
-      const dir = directorio.get(p)
+      const dir = directorio.get(normPunto(p))
       setPuntosNuevos(prev => ({
         ...prev,
         [p]: {
