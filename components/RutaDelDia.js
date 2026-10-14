@@ -180,7 +180,7 @@ export default function RutaDelDia({ fecha, onStatus }) {
               <th>Id Sitio Entrega</th>
               <th>Institución</th>
               <th>Sitio de Entrega</th>
-              <th>HORARIO SUGERIDO COMPENSAR</th>
+              <th>HORARIO SUGERIDO</th>
               <th>HORARIO ENTREGA ALINNOVA</th>
               <th>ORDEN ENTREGA</th>
               <th>Dirección de Entrega</th>
